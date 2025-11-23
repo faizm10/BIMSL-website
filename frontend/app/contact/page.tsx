@@ -91,13 +91,13 @@ export default function ContactPage() {
                   <div>
                     <div className="text-foreground/70 mb-2">Follow us on Instagram:</div>
                     <a
-                      href="https://instagram.com/bimsl"
+                      href="https://www.instagram.com/bram.imsl/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
                     >
                       <Instagram className="h-5 w-5" />
-                      @bimsl
+                      @bram.imsl
                     </a>
                   </div>
                   <div className="text-sm text-foreground/50">
@@ -107,34 +107,6 @@ export default function ContactPage() {
               </CardContent>
             </Card>
           </div>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle>General Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 text-foreground/70">
-                <p>
-                  For questions about registration, schedules, standings, or general league information, 
-                  please reach out to us through any of the contact methods above.
-                </p>
-                <p>
-                  We aim to respond to all inquiries within 24-48 hours. For urgent matters, 
-                  please contact us via phone.
-                </p>
-                <div className="pt-4 border-t border-border">
-                  <h3 className="font-semibold text-foreground mb-2">Office Hours</h3>
-                  <div className="space-y-1">
-                    <div>Monday - Friday: 9:00 AM - 5:00 PM</div>
-                    <div>Saturday - Sunday: Closed</div>
-                    <div className="text-sm text-foreground/50 mt-2">
-                      Note: Office hours may vary during game days.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
