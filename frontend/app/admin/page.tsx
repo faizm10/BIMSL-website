@@ -402,6 +402,7 @@ export default function AdminPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [games, setGames] = useState<Game[]>([])
   const [roster, setRoster] = useState<Roster[]>([])
+  const [gameGoals, setGameGoals] = useState<Array<{ game_id: string; player_id: string; player?: Roster }>>([])
   const [loadingData, setLoadingData] = useState(false)
   
   // Dialog states
@@ -417,6 +418,8 @@ export default function AdminPage() {
   const [editingGame, setEditingGame] = useState<Game | null>(null)
   const [editingRoster, setEditingRoster] = useState<Roster | null>(null)
   const [gameGoalsForDialog, setGameGoalsForDialog] = useState<Array<{ player_id: string; goal_count: number }>>([])
+  const [gameYellowCardsForDialog, setGameYellowCardsForDialog] = useState<Array<{ player_id: string; card_count: number }>>([])
+  const [gameRedCardsForDialog, setGameRedCardsForDialog] = useState<Array<{ player_id: string; card_count: number }>>([])
   const [teamForm, setTeamForm] = useState({ name: '', masjid_name: '' })
   const [gameForm, setGameForm] = useState({
     match_id: '',
@@ -572,6 +575,41 @@ export default function AdminPage() {
 
       if (rosterError) throw rosterError
       setRoster(rosterData || [])
+
+      // Fetch game events (goals, yellow cards, red cards) with player information
+      try {
+        const { data: gameGoalsData, error: gameGoalsError } = await supabase
+          .from('game_goals')
+          .select('game_id, player_id, event_type')
+
+        if (gameGoalsError) {
+          // Check if table doesn't exist (empty error object or relation error)
+          const errorMessage = gameGoalsError.message || JSON.stringify(gameGoalsError)
+          if (errorMessage.includes('relation') || 
+              errorMessage.includes('does not exist') ||
+              errorMessage.includes('relation "game_goals"') ||
+              Object.keys(gameGoalsError).length === 0) {
+            // Table doesn't exist yet - this is expected if migration hasn't been run
+            setGameGoals([])
+          } else {
+            console.warn('Could not fetch game goals:', gameGoalsError)
+            setGameGoals([])
+          }
+        } else if (gameGoalsData) {
+          // Enrich with player information
+          const enrichedGameGoals = gameGoalsData.map(goal => {
+            const player = rosterData?.find(p => p.id === goal.player_id)
+            return {
+              ...goal,
+              player
+            }
+          })
+          setGameGoals(enrichedGameGoals)
+        }
+      } catch {
+        // Silently fail if table doesn't exist
+        setGameGoals([])
+      }
 
       // Calculate team stats from games
       const teamsWithStats = calculateTeamStats(teamsData || [], gamesData || [])
@@ -741,35 +779,95 @@ export default function AdminPage() {
 
       if (error) throw error
 
-      // Update roster goals if any (optional)
+      // Save goal scorers to game_goals table and update roster
       if (newGame && gameGoalsForDialog.length > 0) {
-        // Update each player's goals count in the roster table
-        const goalUpdates = gameGoalsForDialog
-          .filter(g => g.player_id && g.goal_count > 0)
-          .map(async (g) => {
-            // Get current goals for this player
-            const player = roster.find(p => p.id === g.player_id)
-            if (player) {
-              const newGoalsCount = (player.goals || 0) + g.goal_count
-              const { error } = await supabase
-                .from('roster')
-                .update({ goals: newGoalsCount })
-                .eq('id', g.player_id)
+        try {
+          // First, delete any existing game_goals for this game (in case of re-saving)
+          await supabase
+            .from('game_goals')
+            .delete()
+            .eq('game_id', newGame.id)
 
-              if (error) {
-                console.error(`Error updating goals for player ${g.player_id}:`, error)
+          // Create game_goals entries (one row per event)
+          const gameEventsToInsert = [
+            // Goals
+            ...gameGoalsForDialog
+              .filter(g => g.player_id && g.goal_count > 0)
+              .flatMap(g => 
+                Array(g.goal_count).fill(null).map(() => ({
+                  game_id: newGame.id,
+                  player_id: g.player_id,
+                  event_type: 'goal'
+                }))
+              ),
+            // Yellow cards
+            ...gameYellowCardsForDialog
+              .filter(c => c.player_id && c.card_count > 0)
+              .flatMap(c => 
+                Array(c.card_count).fill(null).map(() => ({
+                  game_id: newGame.id,
+                  player_id: c.player_id,
+                  event_type: 'yellow_card'
+                }))
+              ),
+            // Red cards
+            ...gameRedCardsForDialog
+              .filter(c => c.player_id && c.card_count > 0)
+              .flatMap(c => 
+                Array(c.card_count).fill(null).map(() => ({
+                  game_id: newGame.id,
+                  player_id: c.player_id,
+                  event_type: 'red_card'
+                }))
+              )
+          ]
+
+          if (gameEventsToInsert.length > 0) {
+            const { error: goalsError } = await supabase
+              .from('game_goals')
+              .insert(gameEventsToInsert)
+
+            if (goalsError) {
+              // If table doesn't exist, just log and continue
+              if (goalsError.message?.includes('relation') || goalsError.message?.includes('does not exist')) {
+                console.warn('game_goals table does not exist yet. Run migration 007_create_game_goals_table.sql')
+              } else {
+                console.error('Error inserting game goals:', goalsError)
               }
+            } else {
+              // Update roster totals by recalculating from all game_goals
+              await updateRosterGoalsFromGameGoals()
             }
-          })
-
-        await Promise.all(goalUpdates)
+          }
+        } catch (error) {
+          console.error('Error saving game goals:', error)
+          // Don't fail the entire game creation if goal saving fails
+        }
       }
 
       setGameDialogOpen(false)
       resetGameForm()
       setGameGoalsForDialog([])
+      setGameYellowCardsForDialog([])
+      setGameRedCardsForDialog([])
       // Fetch data will refresh roster with updated goals and recalculate team stats
       await fetchData()
+      
+      // Refresh game goals display
+      try {
+        const { data: gameGoalsData } = await supabase
+          .from('game_goals')
+          .select('game_id, player_id')
+        if (gameGoalsData) {
+          const enrichedGameGoals = gameGoalsData.map(goal => {
+            const player = roster.find(p => p.id === goal.player_id)
+            return { ...goal, player }
+          })
+          setGameGoals(enrichedGameGoals)
+        }
+      } catch (error) {
+        // Silently fail if table doesn't exist
+      }
     } catch (error) {
       console.error('Error creating game:', error)
       alert('Error creating game')
@@ -852,31 +950,75 @@ export default function AdminPage() {
         throw error
       }
 
-      // Update goals: delete existing and insert new ones
+      // Save goal scorers to game_goals table and update roster
       if (editingGame) {
-        // Update roster goals if any (optional)
-        // Note: This will add to existing goals. If you need to recalculate, you'd need to track previous goals.
-        if (gameGoalsForDialog.length > 0) {
-          // Update each player's goals count in the roster table
-          const goalUpdates = gameGoalsForDialog
-            .filter(g => g.player_id && g.goal_count > 0)
-            .map(async (g) => {
-              // Get current goals for this player
-              const player = roster.find(p => p.id === g.player_id)
-              if (player) {
-                const newGoalsCount = (player.goals || 0) + g.goal_count
-                const { error } = await supabase
-                  .from('roster')
-                  .update({ goals: newGoalsCount })
-                  .eq('id', g.player_id)
+        try {
+          // Delete existing game_goals for this game
+          await supabase
+            .from('game_goals')
+            .delete()
+            .eq('game_id', editingGame.id)
 
-                if (error) {
-                  console.error(`Error updating goals for player ${g.player_id}:`, error)
-                }
+          // Create new game_goals entries (one row per event)
+          const gameEventsToInsert = [
+            // Goals
+            ...gameGoalsForDialog
+              .filter(g => g.player_id && g.goal_count > 0)
+              .flatMap(g => 
+                Array(g.goal_count).fill(null).map(() => ({
+                  game_id: editingGame.id,
+                  player_id: g.player_id,
+                  event_type: 'goal'
+                }))
+              ),
+            // Yellow cards
+            ...gameYellowCardsForDialog
+              .filter(c => c.player_id && c.card_count > 0)
+              .flatMap(c => 
+                Array(c.card_count).fill(null).map(() => ({
+                  game_id: editingGame.id,
+                  player_id: c.player_id,
+                  event_type: 'yellow_card'
+                }))
+              ),
+            // Red cards
+            ...gameRedCardsForDialog
+              .filter(c => c.player_id && c.card_count > 0)
+              .flatMap(c => 
+                Array(c.card_count).fill(null).map(() => ({
+                  game_id: editingGame.id,
+                  player_id: c.player_id,
+                  event_type: 'red_card'
+                }))
+              )
+          ]
+
+          if (gameEventsToInsert.length > 0) {
+            const { error: goalsError } = await supabase
+              .from('game_goals')
+              .insert(gameEventsToInsert)
+
+            if (goalsError) {
+              // If table doesn't exist, just log and continue
+              const errorMessage = goalsError.message || JSON.stringify(goalsError)
+              if (errorMessage.includes('relation') || 
+                  errorMessage.includes('does not exist') ||
+                  Object.keys(goalsError).length === 0) {
+                console.warn('game_goals table does not exist yet. Run migration 007_create_game_goals_table.sql')
+              } else {
+                console.error('Error inserting game events:', goalsError)
               }
-            })
-
-          await Promise.all(goalUpdates)
+            } else {
+              // Update roster totals by recalculating from all game_goals
+              await updateRosterGoalsFromGameGoals()
+            }
+          } else {
+            // No events in dialog, but still update roster (in case events were removed)
+            await updateRosterGoalsFromGameGoals()
+          }
+        } catch (error) {
+          console.error('Error saving game goals:', error)
+          // Don't fail the entire game update if goal saving fails
         }
       }
 
@@ -884,8 +1026,34 @@ export default function AdminPage() {
       setEditingGame(null)
       resetGameForm()
       setGameGoalsForDialog([])
+      setGameYellowCardsForDialog([])
+      setGameRedCardsForDialog([])
       // Fetch data will refresh roster with updated goals and recalculate team stats
       await fetchData()
+      
+      // Refresh game goals display after roster is updated
+      setTimeout(async () => {
+        try {
+          const { data: gameGoalsData } = await supabase
+            .from('game_goals')
+            .select('game_id, player_id')
+          if (gameGoalsData) {
+            // Get updated roster
+            const { data: updatedRoster } = await supabase
+              .from('roster')
+              .select('*')
+            if (updatedRoster) {
+              const enrichedGameGoals = gameGoalsData.map(goal => {
+                const player = updatedRoster.find(p => p.id === goal.player_id)
+                return { ...goal, player }
+              })
+              setGameGoals(enrichedGameGoals)
+            }
+          }
+        } catch (error) {
+          // Silently fail if table doesn't exist
+        }
+      }, 500)
     } catch (error) {
       console.error('Error updating game:', error)
       const errorMessage = error && typeof error === 'object' && 'message' in error 
@@ -922,6 +1090,82 @@ export default function AdminPage() {
     }
   }
 
+  // Function to recalculate roster stats (goals, yellow cards, red cards) from game_goals table
+  const updateRosterGoalsFromGameGoals = async () => {
+    try {
+      // Fetch all game_goals grouped by player and event type
+      const { data: gameEventsData, error: goalsError } = await supabase
+        .from('game_goals')
+        .select('player_id, event_type')
+
+      if (goalsError) {
+        // If table doesn't exist, just return silently
+        const errorMessage = goalsError.message || JSON.stringify(goalsError)
+        if (errorMessage.includes('relation') || 
+            errorMessage.includes('does not exist') ||
+            Object.keys(goalsError).length === 0) {
+          return
+        }
+        console.error('Error fetching game events:', goalsError)
+        return
+      }
+
+      // Count events per player by type
+      const statsByPlayer: Record<string, { goals: number; yellow_cards: number; red_cards: number }> = {}
+      
+      if (gameEventsData) {
+        gameEventsData.forEach((event: { player_id: string; event_type: string }) => {
+          if (!statsByPlayer[event.player_id]) {
+            statsByPlayer[event.player_id] = { goals: 0, yellow_cards: 0, red_cards: 0 }
+          }
+          if (event.event_type === 'goal') {
+            statsByPlayer[event.player_id].goals += 1
+          } else if (event.event_type === 'yellow_card') {
+            statsByPlayer[event.player_id].yellow_cards += 1
+          } else if (event.event_type === 'red_card') {
+            statsByPlayer[event.player_id].red_cards += 1
+          }
+        })
+      }
+
+      // Update each player's stats in roster
+      const updatePromises = Object.entries(statsByPlayer).map(async ([playerId, stats]) => {
+        const { error } = await supabase
+          .from('roster')
+          .update({ 
+            goals: stats.goals,
+            yellow_cards: stats.yellow_cards,
+            red_cards: stats.red_cards
+          })
+          .eq('id', playerId)
+
+        if (error) {
+          console.error(`Error updating stats for player ${playerId}:`, error)
+        }
+      })
+
+      // Also set stats to 0 for players who have no events
+      const allPlayerIds = roster.map(p => p.id)
+      const playersWithEvents = Object.keys(statsByPlayer)
+      const playersWithoutEvents = allPlayerIds.filter(id => !playersWithEvents.includes(id))
+
+      const zeroStatsPromises = playersWithoutEvents.map(async (playerId) => {
+        const { error } = await supabase
+          .from('roster')
+          .update({ goals: 0, yellow_cards: 0, red_cards: 0 })
+          .eq('id', playerId)
+
+        if (error) {
+          console.error(`Error resetting stats for player ${playerId}:`, error)
+        }
+      })
+
+      await Promise.all([...updatePromises, ...zeroStatsPromises])
+    } catch (error) {
+      console.error('Error updating roster stats from game events:', error)
+    }
+  }
+
   const resetGameForm = () => {
     setGameForm({
       match_id: '',
@@ -951,7 +1195,7 @@ export default function AdminPage() {
     setTeamDialogOpen(true)
   }
 
-  const openGameDialog = (game?: Game) => {
+  const openGameDialog = async (game?: Game) => {
     if (game) {
       setEditingGame(game)
       setGameForm({
@@ -968,8 +1212,73 @@ export default function AdminPage() {
         is_playoff: game.is_playoff || false,
         is_published: game.is_published || false
       })
-      // For now, start with empty goals - we'll update roster directly when saving
-      setGameGoalsForDialog([])
+
+      // Fetch existing events (goals, yellow cards, red cards) for this game
+      try {
+        const { data: gameEventsData, error: goalsError } = await supabase
+          .from('game_goals')
+          .select('player_id, event_type')
+          .eq('game_id', game.id)
+
+        if (goalsError) {
+          // If table doesn't exist or any error, just set empty array silently
+          // Check for common error patterns
+          const errorMessage = goalsError.message || JSON.stringify(goalsError)
+          if (errorMessage.includes('relation') || 
+              errorMessage.includes('does not exist') ||
+              errorMessage.includes('relation "game_goals"') ||
+              Object.keys(goalsError).length === 0) {
+            // Table doesn't exist yet - this is expected if migration hasn't been run
+            setGameGoalsForDialog([])
+            setGameYellowCardsForDialog([])
+            setGameRedCardsForDialog([])
+          } else {
+            // Only log if it's a real error (not just missing table)
+            console.warn('Error fetching game events:', goalsError)
+            setGameGoalsForDialog([])
+            setGameYellowCardsForDialog([])
+            setGameRedCardsForDialog([])
+          }
+        } else {
+          // Group events by player and event type
+          const goalsByPlayer: Record<string, { player_id: string; goal_count: number }> = {}
+          const yellowCardsByPlayer: Record<string, { player_id: string; card_count: number }> = {}
+          const redCardsByPlayer: Record<string, { player_id: string; card_count: number }> = {}
+
+          if (gameEventsData) {
+            gameEventsData.forEach((event: { player_id: string; event_type: string }) => {
+              if (event.event_type === 'goal') {
+                if (goalsByPlayer[event.player_id]) {
+                  goalsByPlayer[event.player_id].goal_count += 1
+                } else {
+                  goalsByPlayer[event.player_id] = { player_id: event.player_id, goal_count: 1 }
+                }
+              } else if (event.event_type === 'yellow_card') {
+                if (yellowCardsByPlayer[event.player_id]) {
+                  yellowCardsByPlayer[event.player_id].card_count += 1
+                } else {
+                  yellowCardsByPlayer[event.player_id] = { player_id: event.player_id, card_count: 1 }
+                }
+              } else if (event.event_type === 'red_card') {
+                if (redCardsByPlayer[event.player_id]) {
+                  redCardsByPlayer[event.player_id].card_count += 1
+                } else {
+                  redCardsByPlayer[event.player_id] = { player_id: event.player_id, card_count: 1 }
+                }
+              }
+            })
+          }
+
+          setGameGoalsForDialog(Object.values(goalsByPlayer))
+          setGameYellowCardsForDialog(Object.values(yellowCardsByPlayer))
+          setGameRedCardsForDialog(Object.values(redCardsByPlayer))
+        }
+      } catch (error) {
+        console.error('Error loading game events:', error)
+        setGameGoalsForDialog([])
+        setGameYellowCardsForDialog([])
+        setGameRedCardsForDialog([])
+      }
     } else {
       setEditingGame(null)
       resetGameForm()
@@ -990,6 +1299,36 @@ export default function AdminPage() {
     const updated = [...gameGoalsForDialog]
     updated[index] = { ...updated[index], [field]: value }
     setGameGoalsForDialog(updated)
+  }
+
+  // Yellow cards functions
+  const addYellowCardToDialog = () => {
+    setGameYellowCardsForDialog([...gameYellowCardsForDialog, { player_id: '', card_count: 1 }])
+  }
+
+  const removeYellowCardFromDialog = (index: number) => {
+    setGameYellowCardsForDialog(gameYellowCardsForDialog.filter((_, i) => i !== index))
+  }
+
+  const updateYellowCardInDialog = (index: number, field: 'player_id' | 'card_count', value: string | number) => {
+    const updated = [...gameYellowCardsForDialog]
+    updated[index] = { ...updated[index], [field]: value }
+    setGameYellowCardsForDialog(updated)
+  }
+
+  // Red cards functions
+  const addRedCardToDialog = () => {
+    setGameRedCardsForDialog([...gameRedCardsForDialog, { player_id: '', card_count: 1 }])
+  }
+
+  const removeRedCardFromDialog = (index: number) => {
+    setGameRedCardsForDialog(gameRedCardsForDialog.filter((_, i) => i !== index))
+  }
+
+  const updateRedCardInDialog = (index: number, field: 'player_id' | 'card_count', value: string | number) => {
+    const updated = [...gameRedCardsForDialog]
+    updated[index] = { ...updated[index], [field]: value }
+    setGameRedCardsForDialog(updated)
   }
 
   // Roster CRUD functions
@@ -1669,6 +2008,44 @@ export default function AdminPage() {
                                     <span>{game.away_score}</span>
                                   </div>
                                 )}
+                                {/* Display goal scorers */}
+                                {(() => {
+                                  const gameGoalScorers = gameGoals
+                                    .filter(gg => gg.game_id === game.id)
+                                    .reduce((acc, goal) => {
+                                      if (goal.player) {
+                                        const existing = acc.find(p => p.player_id === goal.player_id)
+                                        if (existing) {
+                                          existing.goals += 1
+                                        } else {
+                                          acc.push({
+                                            player_id: goal.player_id,
+                                            player_name: goal.player.full_name,
+                                            goals: 1
+                                          })
+                                        }
+                                      }
+                                      return acc
+                                    }, [] as Array<{ player_id: string; player_name: string; goals: number }>)
+
+                                  if (gameGoalScorers.length > 0) {
+                                    return (
+                                      <div className="mt-2 text-xs text-foreground/70">
+                                        <span className="font-semibold">Goal Scorers: </span>
+                                        {gameGoalScorers
+                                          .sort((a, b) => b.goals - a.goals)
+                                          .map((scorer, idx) => (
+                                            <span key={scorer.player_id}>
+                                              {scorer.player_name}
+                                              {scorer.goals > 1 && <span className="font-bold"> ({scorer.goals})</span>}
+                                              {idx < gameGoalScorers.length - 1 && ', '}
+                                            </span>
+                                          ))}
+                                      </div>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </div>
                               <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={() => openGameDialog(game)}>
@@ -1907,6 +2284,132 @@ export default function AdminPage() {
               )}
               {gameGoalsForDialog.length === 0 && (
                 <p className="text-sm text-foreground/70 italic">No goal scorers added. Click &quot;Add Scorer&quot; to track who scored.</p>
+              )}
+            </div>
+
+            {/* Yellow Cards Section */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Yellow Cards (Optional)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addYellowCardToDialog}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Yellow Card
+                </Button>
+              </div>
+              {gameYellowCardsForDialog.length > 0 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {gameYellowCardsForDialog.map((card, index) => {
+                    const homeTeamPlayers = roster.filter(r => r.team_id === gameForm.home_team_id)
+                    const awayTeamPlayers = roster.filter(r => r.team_id === gameForm.away_team_id)
+                    const allPlayers = [...homeTeamPlayers, ...awayTeamPlayers]
+
+                    return (
+                      <div key={index} className="flex gap-2 items-end p-2 border rounded">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Player</Label>
+                          <Select
+                            value={card.player_id}
+                            onValueChange={(value) => updateYellowCardInDialog(index, 'player_id', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select player" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allPlayers.map((player) => (
+                                <SelectItem key={player.id} value={player.id}>
+                                  {player.full_name} {player.jersey_number ? `#${player.jersey_number}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <Label className="text-xs">Count</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={card.card_count}
+                            onChange={(e) => updateYellowCardInDialog(index, 'card_count', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeYellowCardFromDialog(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {gameYellowCardsForDialog.length === 0 && (
+                <p className="text-sm text-foreground/70 italic">No yellow cards added. Click &quot;Add Yellow Card&quot; to track cards.</p>
+              )}
+            </div>
+
+            {/* Red Cards Section */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Red Cards (Optional)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addRedCardToDialog}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Red Card
+                </Button>
+              </div>
+              {gameRedCardsForDialog.length > 0 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {gameRedCardsForDialog.map((card, index) => {
+                    const homeTeamPlayers = roster.filter(r => r.team_id === gameForm.home_team_id)
+                    const awayTeamPlayers = roster.filter(r => r.team_id === gameForm.away_team_id)
+                    const allPlayers = [...homeTeamPlayers, ...awayTeamPlayers]
+
+                    return (
+                      <div key={index} className="flex gap-2 items-end p-2 border rounded">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Player</Label>
+                          <Select
+                            value={card.player_id}
+                            onValueChange={(value) => updateRedCardInDialog(index, 'player_id', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select player" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allPlayers.map((player) => (
+                                <SelectItem key={player.id} value={player.id}>
+                                  {player.full_name} {player.jersey_number ? `#${player.jersey_number}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <Label className="text-xs">Count</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={card.card_count}
+                            onChange={(e) => updateRedCardInDialog(index, 'card_count', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeRedCardFromDialog(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {gameRedCardsForDialog.length === 0 && (
+                <p className="text-sm text-foreground/70 italic">No red cards added. Click &quot;Add Red Card&quot; to track cards.</p>
               )}
             </div>
           </div>
