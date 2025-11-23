@@ -1169,7 +1169,19 @@ export default function AdminPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {Object.entries(gamesByWeek).sort(([a], [b]) => Number(b) - Number(a)).map(([week, weekGames]) => (
+                {Object.entries(
+                  activeTab === 'scores' 
+                    ? games
+                        .filter(g => g.status === 'completed' && g.home_score !== null && g.away_score !== null)
+                        .reduce((acc, game) => {
+                          if (!acc[game.week]) {
+                            acc[game.week] = []
+                          }
+                          acc[game.week].push(game)
+                          return acc
+                        }, {} as Record<number, Game[]>)
+                    : gamesByWeek
+                ).sort(([a], [b]) => Number(b) - Number(a)).map(([week, weekGames]) => (
                   <Card key={week} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">

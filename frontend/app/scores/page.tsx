@@ -23,7 +23,6 @@ type Game = {
 
 export default function ScoresPage() {
   const [completedGames, setCompletedGames] = useState<Game[]>([])
-  const [upcomingGames, setUpcomingGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -48,23 +47,7 @@ export default function ScoresPage() {
 
         if (completedError) throw completedError
 
-        // Fetch upcoming games
-        const { data: upcoming, error: upcomingError } = await supabase
-          .from('games')
-          .select(`
-            *,
-            home_team:teams!games_home_team_id_fkey(id, name),
-            away_team:teams!games_away_team_id_fkey(id, name)
-          `)
-          .in('status', ['scheduled', 'in_progress'])
-          .order('game_date', { ascending: true })
-          .order('game_time', { ascending: true })
-          .limit(10)
-
-        if (upcomingError) throw upcomingError
-
         setCompletedGames(completed || [])
-        setUpcomingGames(upcoming || [])
       } catch (error) {
         console.error('Error fetching scores:', error)
       } finally {
@@ -110,7 +93,6 @@ export default function ScoresPage() {
     }, {} as Record<number, Game[]>)
   }
 
-  const upcomingByWeek = groupGamesByWeek(upcomingGames)
   const completedByWeek = groupGamesByWeek(completedGames)
 
   if (loading) {
@@ -130,62 +112,13 @@ export default function ScoresPage() {
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">Scores</h1>
-          <p className="text-foreground/70 text-lg">Match Results & Upcoming Games</p>
+          <p className="text-foreground/70 text-lg">Completed Game Results</p>
         </div>
 
         <div className="max-w-5xl mx-auto space-y-8">
-          {/* Upcoming Games */}
-          {Object.keys(upcomingByWeek).length > 0 && (
-            <>
-              {Object.entries(upcomingByWeek)
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([week, weekGames]) => (
-                  <Card key={week} className="border-2 border-primary/30 hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-2xl">
-                        <Calendar className="h-6 w-6 text-primary" />
-                        Upcoming - Week {week} - {weekGames[0]?.game_date ? formatDate(weekGames[0].game_date) : ''}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {weekGames.map((game) => (
-                          <div
-                            key={game.id}
-                            className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-muted/50 border border-border gap-4 hover:bg-muted transition-colors"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Calendar className="h-4 w-4 text-primary" />
-                                <span className="text-sm text-foreground/70">{formatDate(game.game_date)}</span>
-                                <Clock className="h-4 w-4 text-primary ml-2" />
-                                <span className="font-semibold text-foreground">{formatTime(game.game_time)}</span>
-                                <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary font-semibold">
-                                  {game.status === 'in_progress' ? 'LIVE' : 'Upcoming'}
-                                </span>
-                              </div>
-                              <div className="text-foreground">
-                                <span className="font-medium">{game.home_team?.name || 'TBD'}</span>
-                                <span className="mx-2 text-foreground/50">vs</span>
-                                <span className="font-medium">{game.away_team?.name || 'TBD'}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-foreground/70 text-sm mt-1">
-                                <MapPin className="h-3 w-3" />
-                                <span>{game.location}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </>
-          )}
-
-          {/* Recent Scores */}
+          {/* Completed Games with Scores */}
           <div>
-            <h2 className="text-2xl font-bold text-foreground mb-6">Recent Results</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">Game Results</h2>
             {Object.keys(completedByWeek).length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
