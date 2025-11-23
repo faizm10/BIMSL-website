@@ -221,7 +221,7 @@ export default function Home() {
             </h2>
             <p className="text-2xl text-primary font-bold mb-8">With Playoffs</p>
             <p className="text-lg text-foreground/70 mb-8">
-              Each team plays 8 games in a round robin format. The top 4 teams advance to the playoffs 
+              Each team plays 8 games in a round robin format. The top 6 teams advance to the playoffs 
               to compete for the championship title.
             </p>
             <div className="grid md:grid-cols-3 gap-6 mt-12">
@@ -234,7 +234,7 @@ export default function Home() {
                 <div className="text-foreground/70 font-semibold">Participating Teams</div>
               </div>
               <div className="text-center">
-                <div className="text-5xl font-black text-primary mb-2">4</div>
+                <div className="text-5xl font-black text-primary mb-2">6</div>
                 <div className="text-foreground/70 font-semibold">Playoff Teams</div>
               </div>
             </div>
