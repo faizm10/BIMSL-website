@@ -887,7 +887,7 @@ function AdminPageContent() {
           })
           setGameGoals(enrichedGameGoals)
         }
-      } catch (error) {
+      } catch {
         // Silently fail if table doesn't exist
       }
     } catch (error) {
@@ -1072,7 +1072,7 @@ function AdminPageContent() {
               setGameGoals(enrichedGameGoals)
             }
           }
-        } catch (error) {
+        } catch {
           // Silently fail if table doesn't exist
         }
       }, 500)
@@ -2796,3 +2796,4 @@ export default function AdminPage() {
     </Suspense>
   )
 }
+
