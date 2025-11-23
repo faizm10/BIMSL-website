@@ -1,15 +1,48 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react"
 
-const standings = [
-  { position: 1, team: "Masjid Al-Huda", played: 7, won: 6, drawn: 1, lost: 0, goalsFor: 24, goalsAgainst: 8, goalDiff: 16, points: 19, form: ["W", "W", "W", "D", "W"] },
-  { position: 2, team: "Brampton Islamic Center", played: 7, won: 5, drawn: 1, lost: 1, goalsFor: 20, goalsAgainst: 12, goalDiff: 8, points: 16, form: ["W", "W", "L", "W", "W"] },
-  { position: 3, team: "Masjid Al-Noor", played: 7, won: 4, drawn: 2, lost: 1, goalsFor: 18, goalsAgainst: 10, goalDiff: 8, points: 14, form: ["W", "D", "W", "W", "D"] },
-  { position: 4, team: "Islamic Center", played: 7, won: 4, drawn: 1, lost: 2, goalsFor: 16, goalsAgainst: 14, goalDiff: 2, points: 13, form: ["W", "L", "W", "W", "L"] },
-  { position: 5, team: "Islamic Society", played: 7, won: 2, drawn: 2, lost: 3, goalsFor: 12, goalsAgainst: 15, goalDiff: -3, points: 8, form: ["L", "D", "L", "W", "D"] },
-  { position: 6, team: "Masjid Al-Falah", played: 7, won: 0, drawn: 1, lost: 6, goalsFor: 6, goalsAgainst: 31, goalDiff: -25, points: 1, form: ["L", "L", "L", "L", "D"] },
-]
+type Team = {
+  id: string
+  name: string
+  points: number
+  games_played: number
+  wins: number
+  draws: number
+  losses: number
+  goals_for: number
+  goals_against: number
+  goal_difference: number
+}
+
+type Game = {
+  id: string
+  home_team_id: string
+  away_team_id: string
+  home_score: number
+  away_score: number
+  status: string
+  game_date: string
+}
+
+type Standing = {
+  position: number
+  team: string
+  teamId: string
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDiff: number
+  points: number
+  form: string[]
+}
 
 function FormIndicator({ form }: { form: string[] }) {
   return (
@@ -40,6 +73,92 @@ function PositionChange({ position, previousPosition }: { position: number; prev
 }
 
 export default function StandingsPage() {
+  const [standings, setStandings] = useState<Standing[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStandings = async () => {
+      try {
+        const supabase = createClient()
+
+        // Fetch teams
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('*')
+          .order('points', { ascending: false })
+          .order('goal_difference', { ascending: false })
+          .order('goals_for', { ascending: false })
+
+        if (teamsError) throw teamsError
+
+        // Fetch completed games
+        const { data: gamesData, error: gamesError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('status', 'completed')
+          .order('game_date', { ascending: false })
+          .order('game_time', { ascending: false })
+
+        if (gamesError) throw gamesError
+
+        // Calculate form for each team (last 5 games)
+        const standingsWithForm: Standing[] = (teamsData || []).map((team, index) => {
+          const teamGames = (gamesData || [])
+            .filter(game => 
+              (game.home_team_id === team.id || game.away_team_id === team.id)
+            )
+            .slice(0, 5) // Last 5 games
+            .reverse() // Reverse to show most recent first
+
+          const form = teamGames.map(game => {
+            const isHome = game.home_team_id === team.id
+            const teamScore = isHome ? game.home_score : game.away_score
+            const opponentScore = isHome ? game.away_score : game.home_score
+
+            if (teamScore > opponentScore) return 'W'
+            if (teamScore < opponentScore) return 'L'
+            return 'D'
+          })
+
+          return {
+            position: index + 1,
+            team: team.name,
+            teamId: team.id,
+            played: team.games_played,
+            won: team.wins,
+            drawn: team.draws,
+            lost: team.losses,
+            goalsFor: team.goals_for,
+            goalsAgainst: team.goals_against,
+            goalDiff: team.goal_difference,
+            points: team.points,
+            form: form.length > 0 ? form : []
+          }
+        })
+
+        setStandings(standingsWithForm)
+      } catch (error) {
+        console.error('Error fetching standings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStandings()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-foreground">Loading standings...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
@@ -75,31 +194,39 @@ export default function StandingsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {standings.map((team) => (
-                      <TableRow key={team.position} className={team.position <= 4 ? "bg-primary/5" : ""}>
-                        <TableCell className="font-bold">
-                          <div className="flex items-center gap-2">
-                            {team.position}
-                            {team.position <= 4 && <Trophy className="h-4 w-4 text-primary" />}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-semibold">{team.team}</TableCell>
-                        <TableCell className="text-center">{team.played}</TableCell>
-                        <TableCell className="text-center">{team.won}</TableCell>
-                        <TableCell className="text-center">{team.drawn}</TableCell>
-                        <TableCell className="text-center">{team.lost}</TableCell>
-                        <TableCell className="text-center">{team.goalsFor}</TableCell>
-                        <TableCell className="text-center">{team.goalsAgainst}</TableCell>
-                        <TableCell className={`text-center font-semibold ${team.goalDiff > 0 ? "text-green-500" : team.goalDiff < 0 ? "text-red-500" : ""}`}>
-                          {team.goalDiff > 0 ? "+" : ""}
-                          {team.goalDiff}
-                        </TableCell>
-                        <TableCell className="text-center font-bold text-lg">{team.points}</TableCell>
-                        <TableCell>
-                          <FormIndicator form={team.form} />
+                    {standings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-foreground/70 py-8">
+                          No standings data available yet
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      standings.map((team) => (
+                        <TableRow key={team.teamId} className={team.position <= 4 ? "bg-primary/5" : ""}>
+                          <TableCell className="font-bold">
+                            <div className="flex items-center gap-2">
+                              {team.position}
+                              {team.position <= 4 && <Trophy className="h-4 w-4 text-primary" />}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold">{team.team}</TableCell>
+                          <TableCell className="text-center">{team.played}</TableCell>
+                          <TableCell className="text-center">{team.won}</TableCell>
+                          <TableCell className="text-center">{team.drawn}</TableCell>
+                          <TableCell className="text-center">{team.lost}</TableCell>
+                          <TableCell className="text-center">{team.goalsFor}</TableCell>
+                          <TableCell className="text-center">{team.goalsAgainst}</TableCell>
+                          <TableCell className={`text-center font-semibold ${team.goalDiff > 0 ? "text-green-500" : team.goalDiff < 0 ? "text-red-500" : ""}`}>
+                            {team.goalDiff > 0 ? "+" : ""}
+                            {team.goalDiff}
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-lg">{team.points}</TableCell>
+                          <TableCell>
+                            <FormIndicator form={team.form} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -119,16 +246,20 @@ export default function StandingsPage() {
                   </div>
                   <div className="text-sm text-foreground/70 mt-4">
                     <div className="font-semibold mb-2">Current Qualifiers:</div>
-                    <ul className="space-y-1">
-                      {standings.slice(0, 4).map((team) => (
-                        <li key={team.position} className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                            {team.position}
-                          </span>
-                          {team.team}
-                        </li>
-                      ))}
-                    </ul>
+                    {standings.length === 0 ? (
+                      <p className="text-foreground/50">No teams qualified yet</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {standings.slice(0, 4).map((team) => (
+                          <li key={team.teamId} className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                              {team.position}
+                            </span>
+                            {team.team}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -169,4 +300,3 @@ export default function StandingsPage() {
     </div>
   )
 }
-
