@@ -31,6 +31,7 @@ export default function ScoresPage() {
         const supabase = createClient()
 
         // Fetch completed games with scores (both home_score and away_score must be set)
+        // Exclude playoff games unless they're published
         const { data: completed, error: completedError } = await supabase
           .from('games')
           .select(`
@@ -41,6 +42,7 @@ export default function ScoresPage() {
           .eq('status', 'completed')
           .not('home_score', 'is', null)
           .not('away_score', 'is', null)
+          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: false })
           .order('game_time', { ascending: false })
           .limit(20)

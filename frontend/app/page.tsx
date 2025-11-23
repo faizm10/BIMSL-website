@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Calendar, Clock, Trophy, Users, Shield, Star, Award, Mail, Phone } from "lucide-react"
+import { MapPin, Calendar, Clock, Trophy, Users, Shield, Star, Award, Mail } from "lucide-react"
 import { Marquee } from "@/components/ui/marquee"
 import Image from "next/image"
 import Link from "next/link"
@@ -35,7 +35,7 @@ export default function Home() {
       try {
         const supabase = createClient()
 
-        // Fetch recent completed games
+        // Fetch recent completed games (exclude unpublished playoff games)
         const { data: completed, error: completedError } = await supabase
           .from('games')
           .select(`
@@ -44,13 +44,14 @@ export default function Home() {
             away_team:teams!games_away_team_id_fkey(id, name)
           `)
           .eq('status', 'completed')
+          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: false })
           .order('game_time', { ascending: false })
           .limit(6)
 
         if (completedError) throw completedError
 
-        // Fetch upcoming games
+        // Fetch upcoming games (exclude unpublished playoff games)
         const { data: upcoming, error: upcomingError } = await supabase
           .from('games')
           .select(`
@@ -59,6 +60,7 @@ export default function Home() {
             away_team:teams!games_away_team_id_fkey(id, name)
           `)
           .in('status', ['scheduled', 'in_progress'])
+          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: true })
           .order('game_time', { ascending: true })
           .limit(6)

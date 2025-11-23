@@ -35,6 +35,7 @@ export default function SchedulePage() {
             home_team:teams!games_home_team_id_fkey(id, name),
             away_team:teams!games_away_team_id_fkey(id, name)
           `)
+          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('week', { ascending: true })
           .order('game_date', { ascending: true })
           .order('game_time', { ascending: true })

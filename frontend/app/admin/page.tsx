@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Calendar, Clock, MapPin, Trophy, Users, Trash2, Edit, Plus, UserPlus } from 'lucide-react'
+import { Calendar, Clock, MapPin, Trophy, Users, Trash2, Edit, Plus, UserPlus, Zap } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,7 +32,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -71,6 +71,8 @@ type Game = {
   home_score: number
   away_score: number
   status: string
+  is_playoff?: boolean
+  is_published?: boolean
   home_team?: Team
   away_team?: Team
 }
@@ -89,9 +91,313 @@ type Roster = {
 
 // Removed GameGoal type - we'll just update roster table directly
 
+// Playoff Bracket Component
+type PlayoffBracketProps = {
+  teams: Team[]
+  games: Game[]
+  onGameUpdate: () => Promise<void>
+  onGameCreate: (gameData: {
+    match_id: string
+    week: number
+    game_date: string
+    game_time: string
+    location: string
+    home_team_id: string
+    away_team_id: string
+    home_score: number
+    away_score: number
+    status: string
+    is_playoff: boolean
+    is_published: boolean
+  }) => Promise<void>
+  onGameEdit: (game: Game) => void
+  supabase: ReturnType<typeof createClient>
+}
+
+function PlayoffBracket({ teams, games, onGameCreate, onGameEdit, onGameUpdate, supabase }: PlayoffBracketProps) {
+  // Get top 6 teams from standings
+  const playoffTeams = teams.slice(0, 6)
+  const team1 = playoffTeams[0]
+  const team2 = playoffTeams[1]
+  const team3 = playoffTeams[2]
+  const team4 = playoffTeams[3]
+  const team5 = playoffTeams[4]
+  const team6 = playoffTeams[5]
+
+  // Filter playoff games (using week 9+ for playoffs)
+  const playoffGames = games.filter(g => g.week >= 9)
+  
+  // Find specific playoff games
+  const findPlayoffGame = (matchIdPrefix: string) => {
+    return playoffGames.find(g => g.match_id?.startsWith(matchIdPrefix))
+  }
+
+  const semi1v4 = findPlayoffGame('PLAYOFF-SEMI1')
+  const semi2v3 = findPlayoffGame('PLAYOFF-SEMI2')
+  const game5v6 = findPlayoffGame('PLAYOFF-5V6')
+  const game3rd4th = findPlayoffGame('PLAYOFF-3RD4TH')
+  const final = findPlayoffGame('PLAYOFF-FINAL')
+
+  // Determine winners
+  const getWinner = (game: Game | undefined) => {
+    if (!game || game.status !== 'completed' || game.home_score === null || game.away_score === null) {
+      return null
+    }
+    if (game.home_score > game.away_score) return game.home_team_id
+    if (game.away_score > game.home_score) return game.away_team_id
+    return null // Draw - no winner yet
+  }
+
+  const winner1v4 = getWinner(semi1v4)
+  const loser1v4 = semi1v4 && winner1v4 ? (semi1v4.home_team_id === winner1v4 ? semi1v4.away_team_id : semi1v4.home_team_id) : null
+  const winner2v3 = getWinner(semi2v3)
+  const loser2v3 = semi2v3 && winner2v3 ? (semi2v3.home_team_id === winner2v3 ? semi2v3.away_team_id : semi2v3.home_team_id) : null
+
+  const openPlayoffGameDialog = async (gameType: string, homeTeamId: string, awayTeamId: string, week: number) => {
+    const existingGame = findPlayoffGame(`PLAYOFF-${gameType}`)
+    
+    if (existingGame) {
+      // Edit existing game
+      onGameEdit(existingGame)
+    } else {
+      // Create new game
+      const today = new Date().toISOString().split('T')[0]
+      const defaultTime = '20:30:00'
+      
+      await onGameCreate({
+        match_id: `PLAYOFF-${gameType}`,
+        week,
+        game_date: today,
+        game_time: defaultTime,
+        location: 'Save Max Sports Centre',
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId,
+        home_score: 0,
+        away_score: 0,
+        status: 'scheduled',
+        is_playoff: true,
+        is_published: false
+      })
+    }
+  }
+
+  const handlePublishToggle = async (game: Game, publish: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ is_published: publish })
+        .eq('id', game.id)
+
+      if (error) throw error
+      await onGameUpdate()
+    } catch (error) {
+      console.error('Error updating publish status:', error)
+      alert(`Error ${publish ? 'publishing' : 'unpublishing'} game`)
+    }
+  }
+
+  const renderGameBox = (
+    game: Game | undefined,
+    team1: Team | undefined,
+    team2: Team | undefined,
+    label: string,
+    onClick: () => void,
+    disabled?: boolean
+  ) => {
+    if (!team1 || !team2) {
+      return (
+        <div className="p-4 rounded-lg border-2 border-border/50 bg-muted/30 opacity-50">
+          <div className="text-xs font-semibold text-foreground/60 mb-2">{label}</div>
+          <div className="text-sm text-foreground/50">Teams not yet determined</div>
+        </div>
+      )
+    }
+
+    const isCompleted = game?.status === 'completed' && game.home_score !== null && game.away_score !== null
+    const winner = game && isCompleted 
+      ? (game.home_score > game.away_score ? game.home_team_id : game.away_score > game.home_score ? game.away_team_id : null)
+      : null
+
+    const team1Score = game && isCompleted 
+      ? (game.home_team_id === team1.id ? game.home_score : game.away_score)
+      : null
+    const team2Score = game && isCompleted 
+      ? (game.home_team_id === team2.id ? game.home_score : game.away_score)
+      : null
+
+    return (
+      <div 
+        onClick={disabled ? undefined : onClick}
+        className={`p-4 rounded-lg border-2 transition-all ${
+          disabled 
+            ? 'bg-muted/30 border-border/50 opacity-50 cursor-not-allowed'
+            : isCompleted 
+              ? 'bg-primary/10 border-primary hover:bg-primary/20 cursor-pointer' 
+              : 'bg-card border-border hover:border-primary/50 cursor-pointer'
+        }`}
+      >
+        <div className="text-xs font-semibold text-foreground/60 mb-2">{label}</div>
+        <div className="space-y-2">
+          <div className={`flex items-center justify-between p-2 rounded ${
+            winner === team1.id ? 'bg-primary/20 font-bold' : 'hover:bg-muted/50'
+          }`}>
+            <span className="text-sm text-foreground">{team1.name}</span>
+            {team1Score !== null && (
+              <span className={`text-sm font-bold ${winner === team1.id ? 'text-primary' : 'text-foreground'}`}>
+                {team1Score}
+              </span>
+            )}
+          </div>
+          <div className={`flex items-center justify-between p-2 rounded ${
+            winner === team2.id ? 'bg-primary/20 font-bold' : 'hover:bg-muted/50'
+          }`}>
+            <span className="text-sm text-foreground">{team2.name}</span>
+            {team2Score !== null && (
+              <span className={`text-sm font-bold ${winner === team2.id ? 'text-primary' : 'text-foreground'}`}>
+                {team2Score}
+              </span>
+            )}
+          </div>
+        </div>
+        {game ? (
+          <div className="mt-3 space-y-2">
+            <div className="text-xs text-foreground/50">
+              {game.game_date ? new Date(game.game_date).toLocaleDateString() : 'Not scheduled'}
+              {game.game_time && ` • ${game.game_time.slice(0, 5)}`}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {game.is_published ? (
+                  <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-600 font-semibold">
+                    Published
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-600 font-semibold">
+                    Draft
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant={game.is_published ? "outline" : "default"}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePublishToggle(game, !game.is_published)
+                }}
+                className="text-xs h-7"
+              >
+                {game.is_published ? 'Unpublish' : 'Publish'}
+              </Button>
+            </div>
+            {!isCompleted && (
+              <div className="text-xs text-primary">Click to edit game</div>
+            )}
+          </div>
+        ) : (
+          <div className="text-xs text-primary mt-2">Click to create game</div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+          <Zap className="h-6 w-6 text-primary" />
+          Playoff Bracket
+        </h2>
+        <p className="text-foreground/70">Based on current standings. Click on games to create or edit them.</p>
+      </div>
+
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader>
+          <CardTitle>Playoff Bracket</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-8">
+            {/* Semifinals Row */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">Semifinals</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                {renderGameBox(
+                  semi1v4,
+                  team1,
+                  team4,
+                  'Semifinal 1: 1st vs 4th',
+                  () => team1 && team4 && openPlayoffGameDialog('SEMI1', team1.id, team4.id, 9)
+                )}
+                {renderGameBox(
+                  semi2v3,
+                  team2,
+                  team3,
+                  'Semifinal 2: 2nd vs 3rd',
+                  () => team2 && team3 && openPlayoffGameDialog('SEMI2', team2.id, team3.id, 9)
+                )}
+              </div>
+            </div>
+
+            {/* 5th vs 6th Place Game */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">5th Place Game</h3>
+              <div className="max-w-md">
+                {renderGameBox(
+                  game5v6,
+                  team5,
+                  team6,
+                  '5th vs 6th',
+                  () => team5 && team6 && openPlayoffGameDialog('5V6', team5.id, team6.id, 10)
+                )}
+              </div>
+            </div>
+
+            {/* 3rd/4th Place Game */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">3rd Place Game</h3>
+              <div className="max-w-md">
+                {renderGameBox(
+                  game3rd4th,
+                  loser1v4 ? teams.find(t => t.id === loser1v4) : undefined,
+                  loser2v3 ? teams.find(t => t.id === loser2v3) : undefined,
+                  '3rd vs 4th (Losers of Semifinals)',
+                  () => {
+                    if (loser1v4 && loser2v3) {
+                      openPlayoffGameDialog('3RD4TH', loser1v4, loser2v3, 10)
+                    }
+                  },
+                  !loser1v4 || !loser2v3
+                )}
+              </div>
+            </div>
+
+            {/* Final */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">Championship Final</h3>
+              <div className="max-w-md">
+                {renderGameBox(
+                  final,
+                  winner1v4 ? teams.find(t => t.id === winner1v4) : undefined,
+                  winner2v3 ? teams.find(t => t.id === winner2v3) : undefined,
+                  'Final (Winners of Semifinals)',
+                  () => {
+                    if (winner1v4 && winner2v3) {
+                      openPlayoffGameDialog('FINAL', winner1v4, winner2v3, 11)
+                    }
+                  },
+                  !winner1v4 || !winner2v3
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'scores' | 'teams' | 'roster' | 'standings'>('schedule')
-  const [user, setUser] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'schedule' | 'scores' | 'teams' | 'roster' | 'standings' | 'playoffs'>('schedule')
+  const [user, setUser] = useState<{ email?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [games, setGames] = useState<Game[]>([])
@@ -146,6 +452,7 @@ export default function AdminPage() {
         fetchData()
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const calculateTeamStats = (teamsData: Team[], gamesData: Game[]): Team[] => {
@@ -628,9 +935,9 @@ export default function AdminPage() {
       setRosterDialogOpen(false)
       resetRosterForm()
       await fetchData()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating roster entry:', error)
-      if (error.code === '23505') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         alert('A player with this jersey number already exists for this team')
       } else {
         alert('Error creating roster entry')
@@ -664,9 +971,9 @@ export default function AdminPage() {
       setEditingRoster(null)
       resetRosterForm()
       await fetchData()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating roster entry:', error)
-      if (error.code === '23505') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         alert('A player with this jersey number already exists for this team')
       } else {
         alert('Error updating roster entry')
@@ -738,8 +1045,11 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-foreground">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-12 w-12 text-primary" />
+          <div className="text-foreground/70 font-medium text-lg">Loading admin dashboard...</div>
+        </div>
       </div>
     )
   }
@@ -806,6 +1116,15 @@ export default function AdminPage() {
                     <span>Standings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setActiveTab('playoffs')}
+                    isActive={activeTab === 'playoffs'}
+                  >
+                    <Zap className="h-4 w-4" />
+                    <span>Playoffs</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -825,14 +1144,16 @@ export default function AdminPage() {
                activeTab === 'scores' ? 'Scores Management' : 
                activeTab === 'teams' ? 'Teams Management' : 
                activeTab === 'roster' ? 'Roster Management' :
-               'Standings'}
+               activeTab === 'standings' ? 'Standings' :
+               'Playoff Bracket'}
             </h1>
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
           {loadingData ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-foreground">Loading data...</div>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Spinner className="h-8 w-8 text-primary" />
+              <div className="text-foreground/70 font-medium">Loading data...</div>
             </div>
           ) : activeTab === 'teams' ? (
             <div className="space-y-6">
@@ -1157,6 +1478,45 @@ export default function AdminPage() {
                 </Card>
               </div>
             </div>
+          ) : activeTab === 'playoffs' ? (
+            <PlayoffBracket 
+              teams={teams}
+              games={games}
+              onGameUpdate={async () => {
+                await fetchData()
+              }}
+              onGameCreate={async (gameData) => {
+                try {
+                  // For playoff games, use the provided match_id
+                  const { error } = await supabase
+                    .from('games')
+                    .insert([gameData])
+
+                  if (error) throw error
+                  await fetchData()
+                } catch (error) {
+                  console.error('Error creating playoff game:', error)
+                  alert('Error creating playoff game')
+                }
+              }}
+              onGameEdit={(game) => {
+                setEditingGame(game)
+                setGameForm({
+                  match_id: game.match_id || '',
+                  week: game.week,
+                  game_date: game.game_date,
+                  game_time: game.game_time,
+                  location: game.location,
+                  home_team_id: game.home_team_id,
+                  away_team_id: game.away_team_id,
+                  home_score: game.home_score || 0,
+                  away_score: game.away_score || 0,
+                  status: game.status
+                })
+                setGameDialogOpen(true)
+              }}
+              supabase={supabase}
+            />
           ) : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -1307,7 +1667,7 @@ export default function AdminPage() {
                 value={gameForm.week}
                 onChange={(e) => setGameForm({ ...gameForm, week: parseInt(e.target.value) || 1 })}
               />
-              <p className="text-xs text-foreground/70">Match ID will be auto-generated as "Week {gameForm.week} - Game X"</p>
+              <p className="text-xs text-foreground/70">Match ID will be auto-generated as &quot;Week {gameForm.week} - Game X&quot;</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1463,7 +1823,7 @@ export default function AdminPage() {
                 </div>
               )}
               {gameGoalsForDialog.length === 0 && (
-                <p className="text-sm text-foreground/70 italic">No goal scorers added. Click "Add Scorer" to track who scored.</p>
+                <p className="text-sm text-foreground/70 italic">No goal scorers added. Click &quot;Add Scorer&quot; to track who scored.</p>
               )}
             </div>
           </div>

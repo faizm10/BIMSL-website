@@ -101,7 +101,7 @@ export default function FAQPage() {
             </CardHeader>
             <CardContent>
               <p className="text-foreground/70 mb-4">
-                If you have additional questions that aren't covered here, please reach out to the league organizers.
+                If you have additional questions that aren&apos;t covered here, please reach out to the league organizers.
               </p>
               <p className="text-foreground/70">
                 More contact information and communication channels will be available soon. Check back regularly for updates!

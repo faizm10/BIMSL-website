@@ -4,30 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react"
-
-type Team = {
-  id: string
-  name: string
-  points: number
-  games_played: number
-  wins: number
-  draws: number
-  losses: number
-  goals_for: number
-  goals_against: number
-  goal_difference: number
-}
-
-type Game = {
-  id: string
-  home_team_id: string
-  away_team_id: string
-  home_score: number
-  away_score: number
-  status: string
-  game_date: string
-}
+import { Trophy } from "lucide-react"
 
 type Standing = {
   position: number
@@ -63,13 +40,6 @@ function FormIndicator({ form }: { form: string[] }) {
       })}
     </div>
   )
-}
-
-function PositionChange({ position, previousPosition }: { position: number; previousPosition?: number }) {
-  if (!previousPosition) return <Minus className="h-4 w-4 text-foreground/30" />
-  if (position < previousPosition) return <TrendingUp className="h-4 w-4 text-green-500" />
-  if (position > previousPosition) return <TrendingDown className="h-4 w-4 text-red-500" />
-  return <Minus className="h-4 w-4 text-foreground/30" />
 }
 
 export default function StandingsPage() {

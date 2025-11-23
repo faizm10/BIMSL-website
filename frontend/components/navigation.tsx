@@ -4,8 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { Home, Calendar, Trophy, Users, Target, HelpCircle, Mail, Menu, X } from "lucide-react"
+import { Home, Calendar, Trophy, Users, Target, HelpCircle, Mail, Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 
@@ -21,7 +20,6 @@ const navItems = [
 
 export function Navigation() {
   const pathname = usePathname()
-  const isMobile = useIsMobile()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const NavLink = ({ item, onClick }: { item: typeof navItems[0], onClick?: () => void }) => {

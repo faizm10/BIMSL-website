@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy, Award, Target } from "lucide-react"
+import { Award, Target } from "lucide-react"
 
 type Player = {
   id: string
