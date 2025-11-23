@@ -91,15 +91,15 @@ export default function LeagueLeadersPage() {
                     return (
                       <div
                         key={player.id}
-                        className={`flex items-center justify-between p-4 rounded-lg ${
+                        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-lg ${
                           rank === 1
                             ? "bg-primary/10 border-2 border-primary"
                             : "bg-muted/50 border border-border"
                         }`}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-sm sm:text-base flex-shrink-0 ${
                               rank === 1
                                 ? "bg-primary text-primary-foreground"
                                 : rank === 2
@@ -111,18 +111,18 @@ export default function LeagueLeadersPage() {
                           >
                             {rank}
                           </div>
-                          <div>
-                            <div className="font-semibold text-foreground">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-foreground text-sm sm:text-base">
                               {player.full_name}
                               {player.jersey_number && (
-                                <span className="ml-2 text-foreground/60">#{player.jersey_number}</span>
+                                <span className="ml-2 text-foreground/60 text-xs sm:text-sm">#{player.jersey_number}</span>
                               )}
                             </div>
-                            <div className="text-sm text-foreground/70">{player.team?.name || 'Unknown Team'}</div>
+                            <div className="text-xs sm:text-sm text-foreground/70 truncate">{player.team?.name || 'Unknown Team'}</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-primary">{player.goals}</div>
+                        <div className="text-right sm:text-left flex-shrink-0">
+                          <div className="text-xl sm:text-2xl font-bold text-primary">{player.goals}</div>
                           <div className="text-xs text-foreground/50">goals</div>
                         </div>
                       </div>

@@ -111,15 +111,15 @@ export default function Home() {
                 INAUGURAL SEASON
               </span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black mb-6 text-foreground">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 text-foreground">
               Brampton Intra-Masjid
               <br />
               <span className="text-primary">Soccer League</span>
             </h1>
-            <p className="text-xl md:text-2xl text-foreground/70 mb-8 font-medium">
+            <p className="text-lg sm:text-xl md:text-2xl text-foreground/70 mb-8 font-medium px-4">
               Join The Premier Soccer League in Brampton
             </p>
-            <div className="flex flex-wrap justify-center gap-4 mb-12 text-sm md:text-base">
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-12 text-xs sm:text-sm md:text-base px-4">
               <div className="flex items-center gap-2 text-foreground/80">
                 <Star className="w-5 h-5 text-primary" />
                 <span>Quality Turf Fields</span>
@@ -152,7 +152,7 @@ export default function Home() {
       {/* League Info Cards */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
             <Card>
               <CardHeader>
                 <Calendar className="w-10 h-10 text-primary mb-4" />
@@ -232,12 +232,12 @@ export default function Home() {
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
               {/* Recent Scores */}
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-3xl md:text-4xl font-bold text-foreground">Recent Scores</h2>
-                  <Button asChild variant="outline" size="sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">Recent Scores</h2>
+                  <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                     <Link href="/scores">View All</Link>
                   </Button>
                 </div>
@@ -266,11 +266,11 @@ export default function Home() {
                               FT
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 text-right">
-                              <span className="font-medium text-foreground">{game.home_team?.name || 'TBD'}</span>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="flex-1 text-right min-w-0">
+                              <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.home_team?.name || 'TBD'}</span>
                             </div>
-                            <div className="flex items-center gap-2 font-bold text-lg">
+                            <div className="flex items-center gap-1 sm:gap-2 font-bold text-base sm:text-lg flex-shrink-0">
                               <span className={game.home_score > game.away_score ? "text-primary" : "text-foreground"}>
                                 {game.home_score}
                               </span>
@@ -279,8 +279,8 @@ export default function Home() {
                                 {game.away_score}
                               </span>
                             </div>
-                            <div className="flex-1">
-                              <span className="font-medium text-foreground">{game.away_team?.name || 'TBD'}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.away_team?.name || 'TBD'}</span>
                             </div>
                           </div>
                         </CardContent>
@@ -292,9 +292,9 @@ export default function Home() {
 
               {/* Upcoming Games */}
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-3xl md:text-4xl font-bold text-foreground">Upcoming Games</h2>
-                  <Button asChild variant="outline" size="sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">Upcoming Games</h2>
+                  <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                     <Link href="/schedule">View All</Link>
                   </Button>
                 </div>
@@ -324,10 +324,10 @@ export default function Home() {
                             </span>
                           </div>
                           <div className="text-foreground">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{game.home_team?.name || 'TBD'}</span>
-                              <span className="text-foreground/50">vs</span>
-                              <span className="font-medium">{game.away_team?.name || 'TBD'}</span>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mb-1">
+                              <span className="font-medium text-sm sm:text-base">{game.home_team?.name || 'TBD'}</span>
+                              <span className="text-foreground/50 hidden sm:inline">vs</span>
+                              <span className="font-medium text-sm sm:text-base">{game.away_team?.name || 'TBD'}</span>
                             </div>
                             <div className="flex items-center gap-1 text-xs text-foreground/60 mt-1">
                               <MapPin className="h-3 w-3" />
@@ -504,33 +504,42 @@ export default function Home() {
                 fadeEdges={true}
                 className="[&_div]:flex [&_div]:items-center [&_div]:justify-center"
               >
-                <div className="flex items-center justify-center h-24 w-48 mx-4">
+                  <div className="flex items-center justify-center h-24 w-48 mx-4">
+                    <Image
+                      src="/sponsors/baba.jpeg"
+                      alt="Baba Sponsor"
+                      width={200}
+                      height={100}
+                      className="object-contain max-h-24 w-auto"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center h-24 w-48 mx-4">
           <Image
-                    src="/sponsors/baba.webp"
-                    alt="Baba Sponsor"
-                    width={200}
-                    height={100}
-                    className="object-contain max-h-24 w-auto"
-                  />
-                </div>
-                <div className="flex items-center justify-center h-24 w-48 mx-4">
+                      src="/sponsors/rahman.jpg"
+                      alt="Rahman Sponsor"
+                      width={200}
+                      height={100}
+                      className="object-contain max-h-24 w-auto"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center h-24 w-48 mx-4">
           <Image
-                    src="/sponsors/rahman.png"
-                    alt="Rahman Sponsor"
-                    width={200}
-                    height={100}
-                    className="object-contain max-h-24 w-auto"
-                  />
-                </div>
-                <div className="flex items-center justify-center h-24 w-48 mx-4">
+                      src="/sponsors/xsmallLogo.png"
+                      alt="Logo Sponsor"
+                      width={200}
+                      height={100}
+                      className="object-contain max-h-24 w-auto"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center h-24 w-48 mx-4">
           <Image
-                    src="/sponsors/xsmallLogo.png"
-                    alt="Logo Sponsor"
-                    width={200}
-                    height={100}
-                    className="object-contain max-h-24 w-auto"
-                  />
-                </div>
+                      src="/sponsors/adhan.png"
+                      alt="Adhan Sponsor"
+                      width={200}
+                      height={100}
+                      className="object-contain max-h-24 w-auto"
+                    />
+                  </div>
               </Marquee>
             </div>
           </div>

@@ -139,9 +139,11 @@ export default function SchedulePage() {
                               <span className="font-semibold text-foreground">{formatTime(game.game_time)}</span>
                             </div>
                             <div className="text-foreground">
-                              <span className="font-medium">{game.home_team?.name || 'TBD'}</span>
-                              <span className="mx-2 text-foreground/50">vs</span>
-                              <span className="font-medium">{game.away_team?.name || 'TBD'}</span>
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
+                                <span className="font-medium text-sm sm:text-base">{game.home_team?.name || 'TBD'}</span>
+                                <span className="text-foreground/50 hidden sm:inline">vs</span>
+                                <span className="font-medium text-sm sm:text-base">{game.away_team?.name || 'TBD'}</span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 text-foreground/70">

@@ -1,9 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Calendar, Trophy, Users, Target, HelpCircle, Mail } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Home, Calendar, Trophy, Users, Target, HelpCircle, Mail, Menu, X } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -17,6 +21,28 @@ const navItems = [
 
 export function Navigation() {
   const pathname = usePathname()
+  const isMobile = useIsMobile()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const NavLink = ({ item, onClick }: { item: typeof navItems[0], onClick?: () => void }) => {
+    const Icon = item.icon
+    const isActive = pathname === item.href
+    return (
+      <Link
+        href={item.href}
+        onClick={onClick}
+        className={cn(
+          "flex items-center space-x-3 px-4 py-3 rounded-md text-base font-medium transition-colors w-full",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted"
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        <span>{item.label}</span>
+      </Link>
+    )
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 shadow-sm">
@@ -26,7 +52,9 @@ export function Navigation() {
             <div className="text-xl md:text-2xl font-bold text-foreground">BIMSL</div>
             <span className="hidden sm:inline text-sm text-foreground/60 font-normal">Brampton Intra-Masjid Soccer League</span>
           </Link>
-          <div className="flex items-center space-x-1">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
@@ -35,18 +63,43 @@ export function Navigation() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center space-x-2 px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                    "flex items-center space-x-2 px-3 lg:px-4 py-2 rounded-md text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground/70 hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
                 </Link>
               )
             })}
           </div>
+
+          {/* Mobile Navigation */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0">
+              <SheetHeader className="p-6 border-b">
+                <SheetTitle className="text-left text-xl font-bold">BIMSL</SheetTitle>
+                <p className="text-sm text-foreground/60 text-left">Brampton Intra-Masjid Soccer League</p>
+              </SheetHeader>
+              <nav className="flex flex-col p-4 space-y-2">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>

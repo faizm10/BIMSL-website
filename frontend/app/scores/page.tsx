@@ -156,11 +156,11 @@ export default function ScoresPage() {
                                     FT
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-3 text-foreground">
-                                  <div className="flex-1 text-right">
-                                    <span className="font-medium">{game.home_team?.name || 'TBD'}</span>
+                                <div className="flex items-center gap-2 sm:gap-3 text-foreground">
+                                  <div className="flex-1 text-right min-w-0">
+                                    <span className="font-medium text-sm sm:text-base truncate block">{game.home_team?.name || 'TBD'}</span>
                                   </div>
-                                  <div className="flex items-center gap-2 font-bold text-xl">
+                                  <div className="flex items-center gap-1 sm:gap-2 font-bold text-lg sm:text-xl flex-shrink-0">
                                     <span className={game.home_score > game.away_score ? "text-primary" : ""}>
                                       {game.home_score}
                                     </span>
@@ -169,8 +169,8 @@ export default function ScoresPage() {
                                       {game.away_score}
                                     </span>
                                   </div>
-                                  <div className="flex-1">
-                                    <span className="font-medium">{game.away_team?.name || 'TBD'}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-medium text-sm sm:text-base truncate block">{game.away_team?.name || 'TBD'}</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-foreground/70 text-sm mt-1">

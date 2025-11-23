@@ -173,62 +173,64 @@ export default function StandingsPage() {
         <div className="max-w-6xl mx-auto">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle>League Table</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl">League Table</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">Pos</TableHead>
-                      <TableHead>Team</TableHead>
-                      <TableHead className="text-center">P</TableHead>
-                      <TableHead className="text-center">W</TableHead>
-                      <TableHead className="text-center">D</TableHead>
-                      <TableHead className="text-center">L</TableHead>
-                      <TableHead className="text-center">GF</TableHead>
-                      <TableHead className="text-center">GA</TableHead>
-                      <TableHead className="text-center">GD</TableHead>
-                      <TableHead className="text-center">Pts</TableHead>
-                      <TableHead className="text-center">Form</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {standings.length === 0 ? (
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center text-foreground/70 py-8">
-                          No standings data available yet
-                        </TableCell>
+                        <TableHead className="w-10 sm:w-12 text-xs sm:text-sm">Pos</TableHead>
+                        <TableHead className="text-xs sm:text-sm min-w-[120px]">Team</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">P</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">W</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">D</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">L</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">GF</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">GA</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">GD</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm font-bold">Pts</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">Form</TableHead>
                       </TableRow>
-                    ) : (
-                      standings.map((team) => (
-                        <TableRow key={team.teamId} className={team.position <= 4 ? "bg-primary/5" : ""}>
-                          <TableCell className="font-bold">
-                            <div className="flex items-center gap-2">
-                              {team.position}
-                              {team.position <= 4 && <Trophy className="h-4 w-4 text-primary" />}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-semibold">{team.team}</TableCell>
-                          <TableCell className="text-center">{team.played}</TableCell>
-                          <TableCell className="text-center">{team.won}</TableCell>
-                          <TableCell className="text-center">{team.drawn}</TableCell>
-                          <TableCell className="text-center">{team.lost}</TableCell>
-                          <TableCell className="text-center">{team.goalsFor}</TableCell>
-                          <TableCell className="text-center">{team.goalsAgainst}</TableCell>
-                          <TableCell className={`text-center font-semibold ${team.goalDiff > 0 ? "text-green-500" : team.goalDiff < 0 ? "text-red-500" : ""}`}>
-                            {team.goalDiff > 0 ? "+" : ""}
-                            {team.goalDiff}
-                          </TableCell>
-                          <TableCell className="text-center font-bold text-lg">{team.points}</TableCell>
-                          <TableCell>
-                            <FormIndicator form={team.form} />
+                    </TableHeader>
+                    <TableBody>
+                      {standings.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={11} className="text-center text-foreground/70 py-8 text-sm">
+                            No standings data available yet
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        standings.map((team) => (
+                          <TableRow key={team.teamId} className={team.position <= 4 ? "bg-primary/5" : ""}>
+                            <TableCell className="font-bold text-xs sm:text-sm">
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                {team.position}
+                                {team.position <= 4 && <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-semibold text-xs sm:text-sm">{team.team}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.played}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.won}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.drawn}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.lost}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.goalsFor}</TableCell>
+                            <TableCell className="text-center text-xs sm:text-sm">{team.goalsAgainst}</TableCell>
+                            <TableCell className={`text-center font-semibold text-xs sm:text-sm ${team.goalDiff > 0 ? "text-green-500" : team.goalDiff < 0 ? "text-red-500" : ""}`}>
+                              {team.goalDiff > 0 ? "+" : ""}
+                              {team.goalDiff}
+                            </TableCell>
+                            <TableCell className="text-center font-bold text-sm sm:text-lg">{team.points}</TableCell>
+                            <TableCell>
+                              <FormIndicator form={team.form} />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
