@@ -81,18 +81,6 @@ export default function SchedulePage() {
     }
   }
 
-  const formatDate = (date: string) => {
-    try {
-      return new Date(date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      })
-    } catch {
-      return date
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -130,7 +118,7 @@ export default function SchedulePage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-2xl">
                       <Calendar className="h-6 w-6 text-primary" />
-                      Week {week} - {weekGames[0]?.game_date ? formatDate(weekGames[0].game_date) : ''}
+                      Week {week} - {weekGames[0]?.game_date || ''}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -143,7 +131,7 @@ export default function SchedulePage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Calendar className="h-4 w-4 text-primary" />
-                              <span className="text-sm text-foreground/70">{formatDate(game.game_date)}</span>
+                              <span className="text-sm text-foreground/70">{game.game_date}</span>
                               <Clock className="h-4 w-4 text-primary ml-2" />
                               <span className="font-semibold text-foreground">{formatTime(game.game_time)}</span>
                             </div>
