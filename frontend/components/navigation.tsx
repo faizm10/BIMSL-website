@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Calendar, Trophy, Users, Target, HelpCircle } from "lucide-react"
+import { Home, Calendar, Trophy, Users, Target, HelpCircle, Mail } from "lucide-react"
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/league-leaders", label: "League Leaders", icon: Users },
   { href: "/scores", label: "Scores", icon: Target },
   { href: "/faq", label: "FAQ", icon: HelpCircle },
+  { href: "/contact", label: "Contact", icon: Mail },
 ]
 
 export function Navigation() {

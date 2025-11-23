@@ -340,10 +340,10 @@ export default function Home() {
             <div>
               <h3 className="text-xl font-bold mb-4 text-foreground">Get in Touch</h3>
               <div className="space-y-2 text-foreground/70">
-                <div className="flex items-center gap-2">
+                <Link href="/contact" className="flex items-center gap-2 hover:text-primary transition-colors">
                   <Mail className="w-4 h-4" />
-                  <span>More information to follow</span>
-                </div>
+                  <span>Contact Us</span>
+                </Link>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   <span>Save Max Sports Centre</span>
@@ -364,6 +364,9 @@ export default function Home() {
                 </Link>
                 <Link href="/faq" className="block text-foreground/70 hover:text-primary transition-colors">
                   FAQ
+                </Link>
+                <Link href="/contact" className="block text-foreground/70 hover:text-primary transition-colors">
+                  Contact
                 </Link>
               </div>
             </div>
