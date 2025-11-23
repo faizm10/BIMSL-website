@@ -1,178 +1,328 @@
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { MapPin, Calendar, Clock, Trophy } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { MapPin, Calendar, Clock, Trophy, Users, Shield, Star, Award, Mail, Phone } from "lucide-react"
+import Link from "next/link"
 
 export default function Home() {
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
-      {/* Stadium lights effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-1/2 opacity-40">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 30}%`,
-                animationDelay: `${Math.random() * 2000}ms`,
-                animationDuration: `${1000 + Math.random() * 2000}ms`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Green field gradient at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-2/5 bg-gradient-to-b from-transparent via-[#0d4d2d]/40 to-[#1a7a4a]/30 pointer-events-none" />
-
-      {/* Field lines */}
-      <div className="absolute bottom-0 left-0 right-0 h-1/3 opacity-10 pointer-events-none">
-        <div className="absolute bottom-1/2 left-0 right-0 h-px bg-white" />
-        <div className="absolute bottom-1/2 left-1/2 w-32 h-32 border border-white rounded-full -translate-x-1/2" />
-      </div>
-
-      {/* Player silhouette glow effect */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-[600px] opacity-10 pointer-events-none">
-        <div className="w-full h-full bg-cyan-400 rounded-full blur-[120px]" />
-      </div>
-
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Hero Section */}
-        <main className="flex-1 flex flex-col items-center justify-center px-4 py-16 md:py-24">
-          {/* Soccer Ball Icon */}
-          <div className="mb-6 md:mb-8">
-            <div className="relative w-16 h-16 md:w-20 md:h-20">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="48" fill="white" stroke="none" />
-                <g fill="black">
-                  <polygon points="50,15 35,25 35,40 50,50 65,40 65,25" />
-                  <polygon points="15,35 10,50 20,65 35,60 35,40 20,35" />
-                  <polygon points="85,35 80,35 65,40 65,60 80,65 90,50" />
-                  <polygon points="35,60 20,65 25,80 50,85 50,70 35,65" />
-                  <polygon points="65,60 65,65 50,70 50,85 75,80 80,65" />
-                </g>
-              </svg>
-            </div>
-          </div>
-
-          {/* INAUGURAL Badge */}
-          <div className="mb-4 md:mb-6">
-            <span className="text-foreground/90 text-sm md:text-base font-bold tracking-[0.3em] uppercase">
-              INAUGURAL
-            </span>
-          </div>
-
-          {/* Main Title */}
-          <div className="text-center mb-12 md:mb-16 max-w-6xl">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-black mb-3 md:mb-4 leading-[0.9] tracking-tighter text-balance">
-              <span className="block text-foreground drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">BRAMPTON</span>
-            </h1>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-black mb-3 md:mb-4 leading-[0.9] tracking-tighter text-balance">
-              <span className="block text-foreground/95 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                INTRA-MASJID
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-primary/10 via-background to-primary/5 py-20 md:py-32">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="mb-6">
+              <span className="inline-block px-4 py-2 bg-primary/20 text-primary font-bold text-sm uppercase tracking-wider rounded-full">
+                INAUGURAL SEASON
               </span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black mb-6 text-foreground">
+              Brampton Intra-Masjid
+              <br />
+              <span className="text-primary">Soccer League</span>
             </h1>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-black leading-[0.9] tracking-tighter text-balance">
-              <span className="block text-primary drop-shadow-[0_0_40px_rgba(125,211,252,0.5)]">SOCCER LEAGUE</span>
-            </h1>
-          </div>
-
-          {/* League Format */}
-          <div className="text-center mb-10 md:mb-12 space-y-2 z-10">
-            <div className="text-foreground text-xl md:text-3xl font-bold uppercase tracking-wider">
-              8 GAME ROUND ROBIN LEAGUE
-            </div>
-            <div className="text-primary text-xl md:text-3xl font-bold uppercase tracking-wider">WITH PLAYOFFS</div>
-          </div>
-
-          {/* CTA Button */}
-          <div className="mb-16 md:mb-20 z-10">
-            <Button
-              size="lg"
-              className="bg-foreground text-background hover:bg-foreground/90 text-base md:text-lg font-bold uppercase tracking-wide px-8 md:px-12 py-6 md:py-7 rounded-full transition-all duration-300 hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
-            >
-              Stay Updated
-            </Button>
-          </div>
-
-          {/* Info Cards */}
-          <div className="grid md:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl z-10 mb-12">
-            <Card className="bg-card/40 backdrop-blur-md border-border/50 p-6 md:p-8 hover:bg-card/60 transition-all duration-300 hover:scale-[1.02]">
-              <Calendar className="w-8 h-8 md:w-10 md:h-10 text-primary mb-4" />
-              <div className="text-foreground/60 text-xs md:text-sm uppercase tracking-wider mb-2 font-semibold">
-                Season
+            <p className="text-xl md:text-2xl text-foreground/70 mb-8 font-medium">
+              Join The Premier Soccer League in Brampton
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 mb-12 text-sm md:text-base">
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Star className="w-5 h-5 text-primary" />
+                <span>Quality Turf Fields</span>
               </div>
-              <div className="text-foreground text-lg md:text-xl font-bold">Oct 12, 2025</div>
-              <div className="text-foreground text-lg md:text-xl font-bold">Feb 15, 2026</div>
-            </Card>
-
-            <Card className="bg-card/40 backdrop-blur-md border-border/50 p-6 md:p-8 hover:bg-card/60 transition-all duration-300 hover:scale-[1.02]">
-              <Clock className="w-8 h-8 md:w-10 md:h-10 text-primary mb-4" />
-              <div className="text-foreground/60 text-xs md:text-sm uppercase tracking-wider mb-2 font-semibold">
-                Game Time
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Shield className="w-5 h-5 text-primary" />
+                <span>Certified Officials</span>
               </div>
-              <div className="text-foreground text-lg md:text-xl font-bold">Sunday Nights</div>
-              <div className="text-foreground text-lg md:text-xl font-bold">8:30 - 11PM</div>
-              <div className="text-foreground/50 text-xs md:text-sm italic mt-2">(Some exceptions may apply)</div>
-            </Card>
-
-            <Card className="bg-card/40 backdrop-blur-md border-border/50 p-6 md:p-8 hover:bg-card/60 transition-all duration-300 hover:scale-[1.02]">
-              <MapPin className="w-8 h-8 md:w-10 md:h-10 text-primary mb-4" />
-              <div className="text-foreground/60 text-xs md:text-sm uppercase tracking-wider mb-2 font-semibold">
-                Location
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Clock className="w-5 h-5 text-primary" />
+                <span>Prime Game Times</span>
               </div>
-              <div className="text-foreground text-base md:text-lg font-bold mb-1">Save Max Sports Centre</div>
-              <div className="text-foreground/70 text-sm md:text-base">1495 Sandalwood Pkwy E</div>
-              <div className="text-foreground/70 text-sm md:text-base">Brampton, ON L6R 0K2</div>
-            </Card>
-          </div>
-
-          {/* Additional Info */}
-          <div className="text-center z-10">
-            <div className="text-foreground/70 text-base md:text-lg font-medium uppercase tracking-wide">
-              More Information To Follow
-            </div>
-          </div>
-        </main>
-
-        {/* Stats Section */}
-        <section className="relative z-10 bg-black/30 backdrop-blur-sm border-t border-border/30 py-12 md:py-16 px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-3 gap-6 md:gap-12 text-center">
-              <div>
-                <Trophy className="w-8 h-8 md:w-12 md:h-12 text-primary mx-auto mb-3 md:mb-4" />
-                <div className="text-3xl md:text-5xl font-black text-foreground mb-2">8</div>
-                <div className="text-xs md:text-sm uppercase tracking-wide text-foreground/60 font-semibold">
-                  Games Per Team
-                </div>
-              </div>
-              <div>
-                <Calendar className="w-8 h-8 md:w-12 md:h-12 text-primary mx-auto mb-3 md:mb-4" />
-                <div className="text-2xl md:text-4xl font-black text-foreground mb-2">Sundays</div>
-                <div className="text-xs md:text-sm uppercase tracking-wide text-foreground/60 font-semibold">
-                  Game Nights
-                </div>
-              </div>
-              <div>
-                <Trophy className="w-8 h-8 md:w-12 md:h-12 text-primary mx-auto mb-3 md:mb-4" />
-                <div className="text-2xl md:text-4xl font-black text-foreground mb-2">2025-26</div>
-                <div className="text-xs md:text-sm uppercase tracking-wide text-foreground/60 font-semibold">
-                  Season
-                </div>
+              <div className="flex items-center gap-2 text-foreground/80">
+                <Users className="w-5 h-5 text-primary" />
+                <span>Matched Skill Levels</span>
               </div>
             </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="text-lg px-8 py-6">
+                <Link href="/schedule">View Schedule</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
+                <Link href="/standings">View Standings</Link>
+              </Button>
+            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Footer */}
-        <footer className="relative z-10 bg-black/40 backdrop-blur-sm border-t border-border/20 py-6 md:py-8 px-4 text-center">
-          <div className="text-foreground/50 text-xs md:text-sm">
+      {/* League Info Cards */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            <Card>
+              <CardHeader>
+                <Calendar className="w-10 h-10 text-primary mb-4" />
+                <CardTitle>Season Dates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-foreground">Oct 12, 2025</div>
+                  <div className="text-foreground/70">to</div>
+                  <div className="text-2xl font-bold text-foreground">Feb 15, 2026</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Clock className="w-10 h-10 text-primary mb-4" />
+                <CardTitle>Game Times</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-foreground">Sunday Nights</div>
+                  <div className="text-lg text-foreground/70">8:30 PM - 11:00 PM</div>
+                  <div className="text-sm text-foreground/50 italic mt-2">(Some exceptions may apply)</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <MapPin className="w-10 h-10 text-primary mb-4" />
+                <CardTitle>Location</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  <div className="font-bold text-foreground">Save Max Sports Centre</div>
+                  <div className="text-foreground/70">1495 Sandalwood Pkwy E</div>
+                  <div className="text-foreground/70">Brampton, ON L6R 0K2</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* League Format */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+              8 Game Round Robin League
+            </h2>
+            <p className="text-2xl text-primary font-bold mb-8">With Playoffs</p>
+            <p className="text-lg text-foreground/70 mb-8">
+              Each team plays 8 games in a round robin format. The top 4 teams advance to the playoffs 
+              to compete for the championship title.
+            </p>
+            <div className="grid md:grid-cols-3 gap-6 mt-12">
+              <div className="text-center">
+                <div className="text-5xl font-black text-primary mb-2">8</div>
+                <div className="text-foreground/70 font-semibold">Games Per Team</div>
+              </div>
+              <div className="text-center">
+                <div className="text-5xl font-black text-primary mb-2">6</div>
+                <div className="text-foreground/70 font-semibold">Participating Teams</div>
+              </div>
+              <div className="text-center">
+                <div className="text-5xl font-black text-primary mb-2">4</div>
+                <div className="text-foreground/70 font-semibold">Playoff Teams</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 text-foreground">
+              About Brampton Intra-Masjid Soccer League
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Star className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">Top Quality Facilities</h3>
+                <p className="text-foreground/70">
+                  We play on the best turf fields in the region with dedicated lines, proper goals, and excellent lighting.
+                </p>
+              </div>
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">100% Refereed Games</h3>
+                <p className="text-foreground/70">
+                  All games are officiated by certified match officials ensuring fair play and proper enforcement of rules.
+                </p>
+              </div>
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Clock className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">Prime Game Slots</h3>
+                <p className="text-foreground/70">
+                  Games are scheduled for Sunday evenings between 8:30 PM and 11:00 PM for optimal playing conditions.
+                </p>
+              </div>
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">For Players, BY Players</h3>
+                <p className="text-foreground/70">
+                  Created by footballers who understand what makes a great league experience for all participants.
+                </p>
+              </div>
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">Matched Skill Levels</h3>
+                <p className="text-foreground/70">
+                  Teams are organized to ensure competitive balance and exciting matches throughout the season.
+                </p>
+              </div>
+              <div>
+                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                  <Trophy className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-foreground">Championship Playoffs</h3>
+                <p className="text-foreground/70">
+                  Top teams compete in playoffs to determine the league champion in an exciting tournament format.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Links */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 text-foreground">
+              League Information
+            </h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    Schedules
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground/70 mb-4">
+                    View the complete game schedule for all 8 weeks of the season.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href="/schedule">View Schedule</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-primary" />
+                    Standings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground/70 mb-4">
+                    Check current league standings and playoff qualification status.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href="/standings">View Standings</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-primary" />
+                    League Leaders
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground/70 mb-4">
+                    See top scorers, assist leaders, and most valuable players.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href="/league-leaders">View Leaders</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    FAQ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground/70 mb-4">
+                    Find answers to frequently asked questions about the league.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href="/faq">View FAQ</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-muted border-t py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-foreground">About Us</h3>
+              <p className="text-foreground/70">
+                The Brampton Intra-Masjid Soccer League brings together teams from various masjids 
+                in Brampton for competitive, community-focused soccer.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-foreground">Get in Touch</h3>
+              <div className="space-y-2 text-foreground/70">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  <span>More information to follow</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>Save Max Sports Centre</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-foreground">Quick Links</h3>
+              <div className="space-y-2">
+                <Link href="/schedule" className="block text-foreground/70 hover:text-primary transition-colors">
+                  Schedule
+                </Link>
+                <Link href="/standings" className="block text-foreground/70 hover:text-primary transition-colors">
+                  Standings
+                </Link>
+                <Link href="/scores" className="block text-foreground/70 hover:text-primary transition-colors">
+                  Scores
+                </Link>
+                <Link href="/faq" className="block text-foreground/70 hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </div>
+            </div>
+          </div>
+          <div className="border-t mt-8 pt-8 text-center text-foreground/50 text-sm">
             © 2025 Brampton Intra-Masjid Soccer League. All rights reserved.
           </div>
-        </footer>
-      </div>
+        </div>
+      </footer>
     </div>
   )
 }
