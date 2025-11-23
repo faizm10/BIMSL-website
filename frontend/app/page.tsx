@@ -736,6 +736,9 @@ export default function Home() {
                 <Link href="/faq" className="block text-foreground/70 hover:text-primary transition-colors">
                   FAQ
                 </Link>
+                <Link href="/sponsors" className="block text-foreground/70 hover:text-primary transition-colors">
+                  Sponsors
+                </Link>
                 <Link href="/contact" className="block text-foreground/70 hover:text-primary transition-colors">
                   Contact
                 </Link>
