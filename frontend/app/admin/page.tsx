@@ -687,24 +687,43 @@ export default function AdminPage() {
       // Generate match_id automatically
       const matchId = await generateMatchId(gameForm.week)
 
-      const { data: newGame, error } = await supabase
+      // Build insert object with core fields
+      const insertData: any = {
+        match_id: matchId,
+        week: gameForm.week,
+        game_date: gameForm.game_date,
+        game_time: gameForm.game_time,
+        location: gameForm.location,
+        home_team_id: gameForm.home_team_id,
+        away_team_id: gameForm.away_team_id,
+        home_score: gameForm.home_score,
+        away_score: gameForm.away_score,
+        status: gameForm.status
+      }
+
+      // Only include playoff fields if they're explicitly set (columns may not exist yet)
+      if (gameForm.is_playoff !== undefined || gameForm.is_published !== undefined) {
+        insertData.is_playoff = gameForm.is_playoff || false
+        insertData.is_published = gameForm.is_published || false
+      }
+
+      let { data: newGame, error } = await supabase
         .from('games')
-        .insert([{
-          match_id: matchId,
-          week: gameForm.week,
-          game_date: gameForm.game_date,
-          game_time: gameForm.game_time,
-          location: gameForm.location,
-          home_team_id: gameForm.home_team_id,
-          away_team_id: gameForm.away_team_id,
-          home_score: gameForm.home_score,
-          away_score: gameForm.away_score,
-          status: gameForm.status,
-          is_playoff: gameForm.is_playoff || false,
-          is_published: gameForm.is_published || false
-        }])
+        .insert([insertData])
         .select()
         .single()
+
+      // If error is about missing columns, retry without playoff fields
+      if (error && (error.message?.includes('column') || error.message?.includes('is_playoff') || error.message?.includes('is_published'))) {
+        const { is_playoff, is_published, ...coreInsertData } = insertData
+        const retryResult = await supabase
+          .from('games')
+          .insert([coreInsertData])
+          .select()
+          .single()
+        newGame = retryResult.data
+        error = retryResult.error
+      }
 
       if (error) throw error
 
@@ -764,25 +783,46 @@ export default function AdminPage() {
         matchId = await generateMatchId(gameForm.week)
       }
 
-      const { error } = await supabase
+      // Build update object with core fields
+      const updateData: any = {
+        match_id: matchId,
+        week: gameForm.week,
+        game_date: gameForm.game_date,
+        game_time: gameForm.game_time,
+        location: gameForm.location,
+        home_team_id: gameForm.home_team_id,
+        away_team_id: gameForm.away_team_id,
+        home_score: gameForm.home_score,
+        away_score: gameForm.away_score,
+        status: gameForm.status
+      }
+
+      // Only include playoff fields if they're explicitly set (columns may not exist yet)
+      // Try to include them, but if the update fails, we'll retry without them
+      if (gameForm.is_playoff !== undefined || gameForm.is_published !== undefined) {
+        updateData.is_playoff = gameForm.is_playoff || false
+        updateData.is_published = gameForm.is_published || false
+      }
+
+      let { error } = await supabase
         .from('games')
-        .update({
-          match_id: matchId,
-          week: gameForm.week,
-          game_date: gameForm.game_date,
-          game_time: gameForm.game_time,
-          location: gameForm.location,
-          home_team_id: gameForm.home_team_id,
-          away_team_id: gameForm.away_team_id,
-          home_score: gameForm.home_score,
-          away_score: gameForm.away_score,
-          status: gameForm.status,
-          is_playoff: gameForm.is_playoff || false,
-          is_published: gameForm.is_published || false
-        })
+        .update(updateData)
         .eq('id', editingGame.id)
 
-      if (error) throw error
+      // If error is about missing columns, retry without playoff fields
+      if (error && (error.message?.includes('column') || error.message?.includes('is_playoff') || error.message?.includes('is_published'))) {
+        const { is_playoff, is_published, ...coreUpdateData } = updateData
+        const retryResult = await supabase
+          .from('games')
+          .update(coreUpdateData)
+          .eq('id', editingGame.id)
+        error = retryResult.error
+      }
+
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
 
       // Update goals: delete existing and insert new ones
       if (editingGame) {
@@ -820,7 +860,10 @@ export default function AdminPage() {
       await fetchData()
     } catch (error) {
       console.error('Error updating game:', error)
-      alert('Error updating game')
+      const errorMessage = error && typeof error === 'object' && 'message' in error 
+        ? (error as { message?: string }).message 
+        : 'Unknown error occurred'
+      alert(`Error updating game: ${errorMessage}`)
     }
   }
 
