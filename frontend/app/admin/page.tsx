@@ -688,7 +688,20 @@ export default function AdminPage() {
       const matchId = await generateMatchId(gameForm.week)
 
       // Build insert object with core fields
-      const insertData: any = {
+      const insertData: {
+        match_id: string
+        week: number
+        game_date: string
+        game_time: string
+        location: string
+        home_team_id: string
+        away_team_id: string
+        home_score: number
+        away_score: number
+        status: string
+        is_playoff?: boolean
+        is_published?: boolean
+      } = {
         match_id: matchId,
         week: gameForm.week,
         game_date: gameForm.game_date,
@@ -715,6 +728,7 @@ export default function AdminPage() {
 
       // If error is about missing columns, retry without playoff fields
       if (error && (error.message?.includes('column') || error.message?.includes('is_playoff') || error.message?.includes('is_published'))) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { is_playoff, is_published, ...coreInsertData } = insertData
         const retryResult = await supabase
           .from('games')
@@ -784,7 +798,20 @@ export default function AdminPage() {
       }
 
       // Build update object with core fields
-      const updateData: any = {
+      const updateData: {
+        match_id: string
+        week: number
+        game_date: string
+        game_time: string
+        location: string
+        home_team_id: string
+        away_team_id: string
+        home_score: number
+        away_score: number
+        status: string
+        is_playoff?: boolean
+        is_published?: boolean
+      } = {
         match_id: matchId,
         week: gameForm.week,
         game_date: gameForm.game_date,
@@ -811,6 +838,7 @@ export default function AdminPage() {
 
       // If error is about missing columns, retry without playoff fields
       if (error && (error.message?.includes('column') || error.message?.includes('is_playoff') || error.message?.includes('is_published'))) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { is_playoff, is_published, ...coreUpdateData } = updateData
         const retryResult = await supabase
           .from('games')
