@@ -42,14 +42,21 @@ export default function ScoresPage() {
           .eq('status', 'completed')
           .not('home_score', 'is', null)
           .not('away_score', 'is', null)
-          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: false })
           .order('game_time', { ascending: false })
-          .limit(20)
+          .limit(50)
 
         if (completedError) throw completedError
 
-        setCompletedGames(completed || [])
+        // Filter out unpublished playoff games client-side (works even if columns don't exist yet)
+        const filteredGames = (completed || []).filter(game => {
+          // If is_playoff doesn't exist or is false, include the game
+          if (!game.is_playoff || game.is_playoff === false) return true
+          // If is_playoff is true, only include if is_published is true
+          return game.is_published === true
+        })
+
+        setCompletedGames(filteredGames.slice(0, 20))
       } catch (error) {
         console.error('Error fetching scores:', error)
       } finally {

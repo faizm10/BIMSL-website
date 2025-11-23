@@ -44,10 +44,9 @@ export default function Home() {
             away_team:teams!games_away_team_id_fkey(id, name)
           `)
           .eq('status', 'completed')
-          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: false })
           .order('game_time', { ascending: false })
-          .limit(6)
+          .limit(20)
 
         if (completedError) throw completedError
 
@@ -60,15 +59,28 @@ export default function Home() {
             away_team:teams!games_away_team_id_fkey(id, name)
           `)
           .in('status', ['scheduled', 'in_progress'])
-          .or('is_playoff.is.null,is_playoff.eq.false,and(is_playoff.eq.true,is_published.eq.true)')
           .order('game_date', { ascending: true })
           .order('game_time', { ascending: true })
-          .limit(6)
+          .limit(20)
 
         if (upcomingError) throw upcomingError
 
-        setRecentScores(completed || [])
-        setUpcomingGames(upcoming || [])
+        // Filter out unpublished playoff games client-side (works even if columns don't exist yet)
+        const filterPlayoffGames = (games: typeof completed) => {
+          if (!games) return []
+          return games.filter(game => {
+            // If is_playoff doesn't exist or is false, include the game
+            if (!game.is_playoff || game.is_playoff === false) return true
+            // If is_playoff is true, only include if is_published is true
+            return game.is_published === true
+          })
+        }
+
+        const filteredCompleted = filterPlayoffGames(completed || [])
+        const filteredUpcoming = filterPlayoffGames(upcoming || [])
+
+        setRecentScores(filteredCompleted.slice(0, 6))
+        setUpcomingGames(filteredUpcoming.slice(0, 6))
       } catch (error) {
         console.error('Error fetching games:', error)
       } finally {

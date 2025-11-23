@@ -124,8 +124,8 @@ function PlayoffBracket({ teams, games, onGameCreate, onGameEdit, onGameUpdate, 
   const team5 = playoffTeams[4]
   const team6 = playoffTeams[5]
 
-  // Filter playoff games (using week 9+ for playoffs)
-  const playoffGames = games.filter(g => g.week >= 9)
+  // Filter playoff games (using is_playoff field)
+  const playoffGames = games.filter(g => g.is_playoff === true)
   
   // Find specific playoff games
   const findPlayoffGame = (matchIdPrefix: string) => {
@@ -428,7 +428,9 @@ export default function AdminPage() {
     away_team_id: '',
     home_score: 0,
     away_score: 0,
-    status: 'scheduled'
+    status: 'scheduled',
+    is_playoff: false,
+    is_published: false
   })
   const [rosterForm, setRosterForm] = useState({
     team_id: '',
@@ -697,7 +699,9 @@ export default function AdminPage() {
           away_team_id: gameForm.away_team_id,
           home_score: gameForm.home_score,
           away_score: gameForm.away_score,
-          status: gameForm.status
+          status: gameForm.status,
+          is_playoff: gameForm.is_playoff || false,
+          is_published: gameForm.is_published || false
         }])
         .select()
         .single()
@@ -772,7 +776,9 @@ export default function AdminPage() {
           away_team_id: gameForm.away_team_id,
           home_score: gameForm.home_score,
           away_score: gameForm.away_score,
-          status: gameForm.status
+          status: gameForm.status,
+          is_playoff: gameForm.is_playoff || false,
+          is_published: gameForm.is_published || false
         })
         .eq('id', editingGame.id)
 
@@ -856,7 +862,9 @@ export default function AdminPage() {
       away_team_id: '',
       home_score: 0,
       away_score: 0,
-      status: 'scheduled'
+      status: 'scheduled',
+      is_playoff: false,
+      is_published: false
     })
     setGameGoalsForDialog([])
   }
@@ -883,9 +891,11 @@ export default function AdminPage() {
         location: game.location,
         home_team_id: game.home_team_id,
         away_team_id: game.away_team_id,
-        home_score: game.home_score,
-        away_score: game.away_score,
-        status: game.status
+        home_score: game.home_score || 0,
+        away_score: game.away_score || 0,
+        status: game.status,
+        is_playoff: game.is_playoff || false,
+        is_published: game.is_published || false
       })
       // For now, start with empty goals - we'll update roster directly when saving
       setGameGoalsForDialog([])
@@ -1511,7 +1521,9 @@ export default function AdminPage() {
                   away_team_id: game.away_team_id,
                   home_score: game.home_score || 0,
                   away_score: game.away_score || 0,
-                  status: game.status
+                  status: game.status,
+                  is_playoff: game.is_playoff || false,
+                  is_published: game.is_published || false
                 })
                 setGameDialogOpen(true)
               }}
