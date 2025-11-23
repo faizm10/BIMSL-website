@@ -35,7 +35,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       })
       if (error) throw error
-      // Update this route to redirect to an authenticated route. The user already has an active session.
+      // Redirect to admin dashboard after successful login
       router.push('/admin')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')

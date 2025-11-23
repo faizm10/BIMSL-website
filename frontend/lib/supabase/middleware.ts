@@ -6,36 +6,11 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  // Validate environment variables
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase environment variables')
-    // Return response without Supabase client if env vars are missing
-    // Skip auth checks for public routes
-    if (
-      request.nextUrl.pathname.startsWith('/auth') ||
-      request.nextUrl.pathname === '/' ||
-      request.nextUrl.pathname.startsWith('/schedule') ||
-      request.nextUrl.pathname.startsWith('/standings') ||
-      request.nextUrl.pathname.startsWith('/league-leaders') ||
-      request.nextUrl.pathname.startsWith('/scores') ||
-      request.nextUrl.pathname.startsWith('/faq')
-    ) {
-      return supabaseResponse
-    }
-    // For protected routes, redirect to login
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
-  }
-
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
-    supabaseUrl,
-    supabaseKey,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -63,12 +38,13 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
-  // Only protect admin routes, allow public routes
-  if (
-    !user &&
-    request.nextUrl.pathname.startsWith('/admin')
-  ) {
-    // no user, redirect to login for admin routes
+  // Public routes that don't require authentication
+  const pathname = request.nextUrl.pathname
+  const isPublicRoute = pathname === '/' || pathname.startsWith('/auth')
+
+  // Only protect admin routes - homepage and auth pages are public
+  if (!user && !isPublicRoute && pathname.startsWith('/admin')) {
+    // Redirect unauthenticated users trying to access admin to login
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
