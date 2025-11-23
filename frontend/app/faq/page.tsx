@@ -67,10 +67,10 @@ const faqs = [
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-2 flex items-center justify-center gap-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2 flex items-center justify-center gap-3">
             <HelpCircle className="h-10 w-10 text-primary" />
             Frequently Asked Questions
           </h1>
@@ -78,7 +78,7 @@ export default function FAQPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <Accordion type="single" collapsible className="w-full">
                 {faqs.map((faq, index) => (
@@ -95,7 +95,7 @@ export default function FAQPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/40 backdrop-blur-md border-border/50 mt-6">
+          <Card className="hover:shadow-lg transition-shadow mt-6">
             <CardHeader>
               <CardTitle>Still have questions?</CardTitle>
             </CardHeader>

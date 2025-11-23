@@ -35,10 +35,10 @@ const mostValuable = [
 
 export default function LeagueLeadersPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-2 flex items-center justify-center gap-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2 flex items-center justify-center gap-3">
             <Award className="h-10 w-10 text-primary" />
             League Leaders
           </h1>
@@ -47,7 +47,7 @@ export default function LeagueLeadersPage() {
 
         <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
           {/* Top Scorers */}
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-6 w-6 text-primary" />
@@ -62,7 +62,7 @@ export default function LeagueLeadersPage() {
                     className={`flex items-center justify-between p-4 rounded-lg ${
                       player.rank === 1
                         ? "bg-primary/10 border-2 border-primary"
-                        : "bg-card/30 border border-border/30"
+                        : "bg-muted/50 border border-border"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -95,7 +95,7 @@ export default function LeagueLeadersPage() {
           </Card>
 
           {/* Top Assists */}
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-6 w-6 text-primary" />
@@ -110,7 +110,7 @@ export default function LeagueLeadersPage() {
                     className={`flex items-center justify-between p-4 rounded-lg ${
                       player.rank === 1
                         ? "bg-primary/10 border-2 border-primary"
-                        : "bg-card/30 border border-border/30"
+                        : "bg-muted/50 border border-border"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -143,7 +143,7 @@ export default function LeagueLeadersPage() {
           </Card>
 
           {/* Clean Sheets */}
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-6 w-6 text-primary" />
@@ -158,7 +158,7 @@ export default function LeagueLeadersPage() {
                     className={`flex items-center justify-between p-4 rounded-lg ${
                       player.rank === 1
                         ? "bg-primary/10 border-2 border-primary"
-                        : "bg-card/30 border border-border/30"
+                        : "bg-muted/50 border border-border"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -191,7 +191,7 @@ export default function LeagueLeadersPage() {
           </Card>
 
           {/* Most Valuable Players */}
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Award className="h-6 w-6 text-primary" />
@@ -206,7 +206,7 @@ export default function LeagueLeadersPage() {
                     className={`flex items-center justify-between p-4 rounded-lg ${
                       player.rank === 1
                         ? "bg-primary/10 border-2 border-primary"
-                        : "bg-card/30 border border-border/30"
+                        : "bg-muted/50 border border-border"
                     }`}
                   >
                     <div className="flex items-center gap-4">

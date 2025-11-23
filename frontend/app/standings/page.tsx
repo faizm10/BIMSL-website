@@ -41,10 +41,10 @@ function PositionChange({ position, previousPosition }: { position: number; prev
 
 export default function StandingsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-2 flex items-center justify-center gap-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2 flex items-center justify-center gap-3">
             <Trophy className="h-10 w-10 text-primary" />
             Standings
           </h1>
@@ -52,7 +52,7 @@ export default function StandingsPage() {
         </div>
 
         <div className="max-w-6xl mx-auto">
-          <Card className="bg-card/40 backdrop-blur-md border-border/50">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle>League Table</CardTitle>
             </CardHeader>
@@ -107,7 +107,7 @@ export default function StandingsPage() {
           </Card>
 
           <div className="mt-8 grid md:grid-cols-2 gap-4">
-            <Card className="bg-card/40 backdrop-blur-md border-border/50">
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="text-lg">Playoff Qualification</CardTitle>
               </CardHeader>
@@ -134,7 +134,7 @@ export default function StandingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/40 backdrop-blur-md border-border/50">
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="text-lg">Legend</CardTitle>
               </CardHeader>

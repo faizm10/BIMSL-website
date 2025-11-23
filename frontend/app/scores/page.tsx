@@ -54,17 +54,17 @@ const upcomingGames = [
 
 export default function ScoresPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-2">Scores</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">Scores</h1>
           <p className="text-foreground/70 text-lg">Match Results & Upcoming Games</p>
         </div>
 
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Upcoming Games */}
           {upcomingGames.map((week) => (
-            <Card key={week.week} className="bg-card/40 backdrop-blur-md border-border/50 border-2 border-primary/30">
+            <Card key={week.week} className="border-2 border-primary/30 hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Calendar className="h-6 w-6 text-primary" />
@@ -76,7 +76,7 @@ export default function ScoresPage() {
                   {week.games.map((game, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-card/30 border border-border/30 gap-4"
+                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-muted/50 border border-border gap-4 hover:bg-muted transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -104,7 +104,7 @@ export default function ScoresPage() {
             <h2 className="text-2xl font-bold text-foreground mb-6">Recent Results</h2>
             <div className="space-y-6">
               {recentScores.map((week) => (
-                <Card key={week.week} className="bg-card/40 backdrop-blur-md border-border/50">
+                <Card key={week.week} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-primary" />

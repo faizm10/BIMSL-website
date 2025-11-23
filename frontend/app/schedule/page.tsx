@@ -78,16 +78,16 @@ const schedule = [
 
 export default function SchedulePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#1a1533] to-[#0a0e1a]">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-black text-foreground mb-2">Schedule</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">Schedule</h1>
           <p className="text-foreground/70 text-lg">Season: Oct 12, 2025 - Feb 15, 2026</p>
         </div>
 
         <div className="space-y-6 max-w-5xl mx-auto">
           {schedule.map((week) => (
-            <Card key={week.week} className="bg-card/40 backdrop-blur-md border-border/50">
+            <Card key={week.week} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Calendar className="h-6 w-6 text-primary" />
@@ -99,7 +99,7 @@ export default function SchedulePage() {
                   {week.games.map((game, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-card/30 border border-border/30 gap-4"
+                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-muted/50 border border-border gap-4 hover:bg-muted transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -125,7 +125,7 @@ export default function SchedulePage() {
         </div>
 
         <div className="mt-12 text-center">
-          <Card className="bg-card/40 backdrop-blur-md border-border/50 max-w-2xl mx-auto">
+          <Card className="max-w-2xl mx-auto">
             <CardContent className="pt-6">
               <div className="flex items-center justify-center gap-2 text-foreground/70">
                 <MapPin className="h-5 w-5" />
