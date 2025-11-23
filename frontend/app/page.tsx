@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Calendar, Clock, Trophy, Users, Shield, Star, Award, Mail, Phone } from "lucide-react"
+import { Marquee } from "@/components/ui/marquee"
+import Image from "next/image"
 import Link from "next/link"
 
 export default function Home() {
@@ -271,6 +273,54 @@ export default function Home() {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sponsors Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 text-foreground">
+              Our Sponsors
+            </h2>
+            <div className="py-8">
+              <Marquee
+                speed={50}
+                gap={48}
+                pauseOnTap={true}
+                fadeEdges={true}
+                className="[&_div]:flex [&_div]:items-center [&_div]:justify-center"
+              >
+                <div className="flex items-center justify-center h-24 w-48 mx-4">
+          <Image
+                    src="/sponsors/baba.webp"
+                    alt="Baba Sponsor"
+                    width={200}
+                    height={100}
+                    className="object-contain max-h-24 w-auto"
+                  />
+                </div>
+                <div className="flex items-center justify-center h-24 w-48 mx-4">
+          <Image
+                    src="/sponsors/rahman.png"
+                    alt="Rahman Sponsor"
+                    width={200}
+                    height={100}
+                    className="object-contain max-h-24 w-auto"
+                  />
+                </div>
+                <div className="flex items-center justify-center h-24 w-48 mx-4">
+          <Image
+                    src="/sponsors/xsmallLogo.png"
+                    alt="Logo Sponsor"
+                    width={200}
+                    height={100}
+                    className="object-contain max-h-24 w-auto"
+                  />
+                </div>
+              </Marquee>
             </div>
           </div>
         </div>
