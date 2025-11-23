@@ -9,22 +9,26 @@ export default function SponsorsPage() {
     {
       name: "Adhan",
       image: "/sponsors/adhan.png",
-      alt: "Adhan Sponsor"
+      alt: "Adhan Sponsor",
+      href: "https://myadhanclock.com/" // Update with actual URL
     },
     {
       name: "Baba",
       image: "/sponsors/baba.jpeg",
-      alt: "Baba Sponsor"
+      alt: "Baba Sponsor",
+      href: "https://babaspizzaandwings.ca/" // Update with actual URL
     },
     {
       name: "Rahman",
       image: "/sponsors/rahman.jpg",
-      alt: "Rahman Sponsor"
+      alt: "Rahman Sponsor",
+      href: "http://rahmanmotors.com/" // Update with actual URL
     },
     {
       name: "BIMSL",
-      image: "/sponsors/xsmallLogo.png",
-      alt: "BIMSL Logo"
+      image: "/sponsors/mathabah.png",
+      alt: "Mathabah Sponsor",
+      href: "https://www.mathabah.org/" // Links back to homepage
     }
   ]
 
@@ -53,7 +57,12 @@ export default function SponsorsPage() {
             {sponsors.map((sponsor, index) => (
               <Card key={index} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 md:p-8">
-                  <div className="flex flex-col items-center justify-center min-h-[200px]">
+                  <Link 
+                    href={sponsor.href} 
+                    target={sponsor.href.startsWith('http') ? '_blank' : '_self'}
+                    rel={sponsor.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    className="flex flex-col items-center justify-center min-h-[200px] hover:opacity-80 transition-opacity"
+                  >
                     <div className="relative w-full h-48 mb-4">
                       <Image
                         src={sponsor.image}
@@ -66,7 +75,7 @@ export default function SponsorsPage() {
                     <h3 className="text-xl font-semibold text-foreground mt-4">
                       {sponsor.name}
                     </h3>
-                  </div>
+                  </Link>
                 </CardContent>
               </Card>
             ))}
