@@ -19,7 +19,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, Clock, MapPin, Trophy, Users, Trash2, Edit, Plus } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Calendar, Clock, MapPin, Trophy, Users, Trash2, Edit, Plus, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -74,24 +75,42 @@ type Game = {
   away_team?: Team
 }
 
+type Roster = {
+  id: string
+  team_id: string
+  full_name: string
+  jersey_number: number | null
+  goals: number
+  assists: number
+  yellow_cards: number
+  red_cards: number
+  team?: Team
+}
+
+// Removed GameGoal type - we'll just update roster table directly
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'scores' | 'teams'>('schedule')
+  const [activeTab, setActiveTab] = useState<'schedule' | 'scores' | 'teams' | 'roster' | 'standings'>('schedule')
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [teams, setTeams] = useState<Team[]>([])
   const [games, setGames] = useState<Game[]>([])
+  const [roster, setRoster] = useState<Roster[]>([])
   const [loadingData, setLoadingData] = useState(false)
   
   // Dialog states
   const [teamDialogOpen, setTeamDialogOpen] = useState(false)
   const [gameDialogOpen, setGameDialogOpen] = useState(false)
+  const [rosterDialogOpen, setRosterDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteType, setDeleteType] = useState<'team' | 'game'>('team')
+  const [deleteType, setDeleteType] = useState<'team' | 'game' | 'roster'>('team')
   const [deleteId, setDeleteId] = useState<string>('')
   
   // Form states
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [editingGame, setEditingGame] = useState<Game | null>(null)
+  const [editingRoster, setEditingRoster] = useState<Roster | null>(null)
+  const [gameGoalsForDialog, setGameGoalsForDialog] = useState<Array<{ player_id: string; goal_count: number }>>([])
   const [teamForm, setTeamForm] = useState({ name: '', masjid_name: '' })
   const [gameForm, setGameForm] = useState({
     match_id: '',
@@ -104,6 +123,15 @@ export default function AdminPage() {
     home_score: 0,
     away_score: 0,
     status: 'scheduled'
+  })
+  const [rosterForm, setRosterForm] = useState({
+    team_id: '',
+    full_name: '',
+    jersey_number: null as number | null,
+    goals: 0,
+    assists: 0,
+    yellow_cards: 0,
+    red_cards: 0
   })
 
   const supabase = createClient()
@@ -223,6 +251,19 @@ export default function AdminPage() {
       if (gamesError) throw gamesError
       setGames(gamesData || [])
 
+      // Fetch roster with team names
+      const { data: rosterData, error: rosterError } = await supabase
+        .from('roster')
+        .select(`
+          *,
+          team:teams(id, name)
+        `)
+        .order('team_id', { ascending: true })
+        .order('full_name', { ascending: true })
+
+      if (rosterError) throw rosterError
+      setRoster(rosterData || [])
+
       // Calculate team stats from games
       const teamsWithStats = calculateTeamStats(teamsData || [], gamesData || [])
       setTeams(teamsWithStats)
@@ -337,7 +378,7 @@ export default function AdminPage() {
       // Generate match_id automatically
       const matchId = await generateMatchId(gameForm.week)
 
-      const { error } = await supabase
+      const { data: newGame, error } = await supabase
         .from('games')
         .insert([{
           match_id: matchId,
@@ -351,11 +392,39 @@ export default function AdminPage() {
           away_score: gameForm.away_score,
           status: gameForm.status
         }])
+        .select()
+        .single()
 
       if (error) throw error
+
+      // Update roster goals if any (optional)
+      if (newGame && gameGoalsForDialog.length > 0) {
+        // Update each player's goals count in the roster table
+        const goalUpdates = gameGoalsForDialog
+          .filter(g => g.player_id && g.goal_count > 0)
+          .map(async (g) => {
+            // Get current goals for this player
+            const player = roster.find(p => p.id === g.player_id)
+            if (player) {
+              const newGoalsCount = (player.goals || 0) + g.goal_count
+              const { error } = await supabase
+                .from('roster')
+                .update({ goals: newGoalsCount })
+                .eq('id', g.player_id)
+
+              if (error) {
+                console.error(`Error updating goals for player ${g.player_id}:`, error)
+              }
+            }
+          })
+
+        await Promise.all(goalUpdates)
+      }
+
       setGameDialogOpen(false)
       resetGameForm()
-      // Fetch data will recalculate and sync team stats
+      setGameGoalsForDialog([])
+      // Fetch data will refresh roster with updated goals and recalculate team stats
       await fetchData()
     } catch (error) {
       console.error('Error creating game:', error)
@@ -401,10 +470,40 @@ export default function AdminPage() {
         .eq('id', editingGame.id)
 
       if (error) throw error
+
+      // Update goals: delete existing and insert new ones
+      if (editingGame) {
+        // Update roster goals if any (optional)
+        // Note: This will add to existing goals. If you need to recalculate, you'd need to track previous goals.
+        if (gameGoalsForDialog.length > 0) {
+          // Update each player's goals count in the roster table
+          const goalUpdates = gameGoalsForDialog
+            .filter(g => g.player_id && g.goal_count > 0)
+            .map(async (g) => {
+              // Get current goals for this player
+              const player = roster.find(p => p.id === g.player_id)
+              if (player) {
+                const newGoalsCount = (player.goals || 0) + g.goal_count
+                const { error } = await supabase
+                  .from('roster')
+                  .update({ goals: newGoalsCount })
+                  .eq('id', g.player_id)
+
+                if (error) {
+                  console.error(`Error updating goals for player ${g.player_id}:`, error)
+                }
+              }
+            })
+
+          await Promise.all(goalUpdates)
+        }
+      }
+
       setGameDialogOpen(false)
       setEditingGame(null)
       resetGameForm()
-      // Fetch data will recalculate and sync team stats
+      setGameGoalsForDialog([])
+      // Fetch data will refresh roster with updated goals and recalculate team stats
       await fetchData()
     } catch (error) {
       console.error('Error updating game:', error)
@@ -429,6 +528,16 @@ export default function AdminPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (deleteType === 'team') {
+      await handleDeleteTeam()
+    } else if (deleteType === 'game') {
+      await handleDeleteGame()
+    } else if (deleteType === 'roster') {
+      await handleDeleteRoster()
+    }
+  }
+
   const resetGameForm = () => {
     setGameForm({
       match_id: '',
@@ -442,6 +551,7 @@ export default function AdminPage() {
       away_score: 0,
       status: 'scheduled'
     })
+    setGameGoalsForDialog([])
   }
 
   const openTeamDialog = (team?: Team) => {
@@ -470,14 +580,148 @@ export default function AdminPage() {
         away_score: game.away_score,
         status: game.status
       })
+      // For now, start with empty goals - we'll update roster directly when saving
+      setGameGoalsForDialog([])
     } else {
       setEditingGame(null)
       resetGameForm()
+      setGameGoalsForDialog([])
     }
     setGameDialogOpen(true)
   }
 
-  const openDeleteDialog = (type: 'team' | 'game', id: string) => {
+  const addGoalToDialog = () => {
+    setGameGoalsForDialog([...gameGoalsForDialog, { player_id: '', goal_count: 1 }])
+  }
+
+  const removeGoalFromDialog = (index: number) => {
+    setGameGoalsForDialog(gameGoalsForDialog.filter((_, i) => i !== index))
+  }
+
+  const updateGoalInDialog = (index: number, field: 'player_id' | 'goal_count', value: string | number) => {
+    const updated = [...gameGoalsForDialog]
+    updated[index] = { ...updated[index], [field]: value }
+    setGameGoalsForDialog(updated)
+  }
+
+  // Roster CRUD functions
+  const handleCreateRoster = async () => {
+    try {
+      if (!rosterForm.team_id || !rosterForm.full_name) {
+        alert('Please fill all required fields (Team, Full Name)')
+        return
+      }
+
+      const { error } = await supabase
+        .from('roster')
+        .insert([{
+          team_id: rosterForm.team_id,
+          full_name: rosterForm.full_name,
+          jersey_number: rosterForm.jersey_number || null,
+          goals: rosterForm.goals || 0,
+          assists: rosterForm.assists || 0,
+          yellow_cards: rosterForm.yellow_cards || 0,
+          red_cards: rosterForm.red_cards || 0
+        }])
+
+      if (error) throw error
+      setRosterDialogOpen(false)
+      resetRosterForm()
+      await fetchData()
+    } catch (error: any) {
+      console.error('Error creating roster entry:', error)
+      if (error.code === '23505') {
+        alert('A player with this jersey number already exists for this team')
+      } else {
+        alert('Error creating roster entry')
+      }
+    }
+  }
+
+  const handleUpdateRoster = async () => {
+    if (!editingRoster) return
+    try {
+      if (!rosterForm.team_id || !rosterForm.full_name) {
+        alert('Please fill all required fields (Team, Full Name)')
+        return
+      }
+
+      const { error } = await supabase
+        .from('roster')
+        .update({
+          team_id: rosterForm.team_id,
+          full_name: rosterForm.full_name,
+          jersey_number: rosterForm.jersey_number || null,
+          goals: rosterForm.goals || 0,
+          assists: rosterForm.assists || 0,
+          yellow_cards: rosterForm.yellow_cards || 0,
+          red_cards: rosterForm.red_cards || 0
+        })
+        .eq('id', editingRoster.id)
+
+      if (error) throw error
+      setRosterDialogOpen(false)
+      setEditingRoster(null)
+      resetRosterForm()
+      await fetchData()
+    } catch (error: any) {
+      console.error('Error updating roster entry:', error)
+      if (error.code === '23505') {
+        alert('A player with this jersey number already exists for this team')
+      } else {
+        alert('Error updating roster entry')
+      }
+    }
+  }
+
+  const handleDeleteRoster = async () => {
+    try {
+      const { error } = await supabase
+        .from('roster')
+        .delete()
+        .eq('id', deleteId)
+
+      if (error) throw error
+      setDeleteDialogOpen(false)
+      await fetchData()
+    } catch (error) {
+      console.error('Error deleting roster entry:', error)
+      alert('Error deleting roster entry')
+    }
+  }
+
+  const resetRosterForm = () => {
+    setRosterForm({
+      team_id: '',
+      full_name: '',
+      jersey_number: null,
+      goals: 0,
+      assists: 0,
+      yellow_cards: 0,
+      red_cards: 0
+    })
+  }
+
+  const openRosterDialog = (rosterEntry?: Roster) => {
+    if (rosterEntry) {
+      setEditingRoster(rosterEntry)
+      setRosterForm({
+        team_id: rosterEntry.team_id,
+        full_name: rosterEntry.full_name,
+        jersey_number: rosterEntry.jersey_number,
+        goals: rosterEntry.goals,
+        assists: rosterEntry.assists,
+        yellow_cards: rosterEntry.yellow_cards,
+        red_cards: rosterEntry.red_cards
+      })
+    } else {
+      setEditingRoster(null)
+      resetRosterForm()
+    }
+    setRosterDialogOpen(true)
+  }
+
+  const openDeleteDialog = (type: 'team' | 'game' | 'roster', id: string) => {
     setDeleteType(type)
     setDeleteId(id)
     setDeleteDialogOpen(true)
@@ -544,6 +788,24 @@ export default function AdminPage() {
                     <span>Teams</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setActiveTab('roster')}
+                    isActive={activeTab === 'roster'}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Roster</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setActiveTab('standings')}
+                    isActive={activeTab === 'standings'}
+                  >
+                    <Trophy className="h-4 w-4" />
+                    <span>Standings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -559,7 +821,11 @@ export default function AdminPage() {
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">
-              {activeTab === 'schedule' ? 'Schedule Management' : activeTab === 'scores' ? 'Scores Management' : 'Teams Management'}
+              {activeTab === 'schedule' ? 'Schedule Management' : 
+               activeTab === 'scores' ? 'Scores Management' : 
+               activeTab === 'teams' ? 'Teams Management' : 
+               activeTab === 'roster' ? 'Roster Management' :
+               'Standings'}
             </h1>
           </div>
         </header>
@@ -643,6 +909,252 @@ export default function AdminPage() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            </div>
+          ) : activeTab === 'roster' ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">Team Roster</h2>
+                <Button onClick={() => openRosterDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Player
+                </Button>
+              </div>
+              <div className="space-y-4">
+                {Object.entries(
+                  roster.reduce((acc, player) => {
+                    const teamName = player.team?.name || 'Unknown Team'
+                    if (!acc[teamName]) {
+                      acc[teamName] = []
+                    }
+                    acc[teamName].push(player)
+                    return acc
+                  }, {} as Record<string, Roster[]>)
+                )
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([teamName, players]) => (
+                    <Card key={teamName} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <UserPlus className="h-5 w-5 text-primary" />
+                          {teamName}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left p-2 text-sm font-semibold text-foreground">#</th>
+                                <th className="text-left p-2 text-sm font-semibold text-foreground">Name</th>
+                                <th className="text-center p-2 text-sm font-semibold text-foreground">Goals</th>
+                                <th className="text-center p-2 text-sm font-semibold text-foreground">Assists</th>
+                                <th className="text-center p-2 text-sm font-semibold text-foreground">Yellow</th>
+                                <th className="text-center p-2 text-sm font-semibold text-foreground">Red</th>
+                                <th className="text-right p-2 text-sm font-semibold text-foreground">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {players
+                                .sort((a, b) => {
+                                  if (a.jersey_number === null && b.jersey_number === null) return 0
+                                  if (a.jersey_number === null) return 1
+                                  if (b.jersey_number === null) return -1
+                                  return a.jersey_number - b.jersey_number
+                                })
+                                .map((player) => (
+                                  <tr key={player.id} className="border-b hover:bg-muted/50">
+                                    <td className="p-2 font-semibold text-foreground">{player.jersey_number ?? '-'}</td>
+                                    <td className="p-2 text-foreground">{player.full_name}</td>
+                                    <td className="p-2 text-center text-foreground">{player.goals}</td>
+                                    <td className="p-2 text-center text-foreground">{player.assists}</td>
+                                    <td className="p-2 text-center text-yellow-600 font-semibold">{player.yellow_cards}</td>
+                                    <td className="p-2 text-center text-red-600 font-semibold">{player.red_cards}</td>
+                                    <td className="p-2">
+                                      <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => openRosterDialog(player)}>
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={() => openDeleteDialog('roster', player.id)}>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          ) : activeTab === 'standings' ? (
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
+                  <Trophy className="h-6 w-6 text-primary" />
+                  League Standings
+                </h2>
+                <p className="text-foreground/70">Current League Table</p>
+              </div>
+
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle>League Table</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">Pos</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead className="text-center">P</TableHead>
+                          <TableHead className="text-center">W</TableHead>
+                          <TableHead className="text-center">D</TableHead>
+                          <TableHead className="text-center">L</TableHead>
+                          <TableHead className="text-center">GF</TableHead>
+                          <TableHead className="text-center">GA</TableHead>
+                          <TableHead className="text-center">GD</TableHead>
+                          <TableHead className="text-center">Pts</TableHead>
+                          <TableHead className="text-center">Form</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teams.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={11} className="text-center text-foreground/70 py-8">
+                              No standings data available yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          teams.map((team, index) => {
+                            // Calculate form (last 5 games)
+                            const teamGames = games
+                              .filter(g => g.status === 'completed' && (g.home_team_id === team.id || g.away_team_id === team.id))
+                              .slice(0, 5)
+                              .reverse()
+
+                            const form = teamGames.map(game => {
+                              const isHome = game.home_team_id === team.id
+                              const teamScore = isHome ? game.home_score : game.away_score
+                              const opponentScore = isHome ? game.away_score : game.home_score
+                              if (teamScore > opponentScore) return 'W'
+                              if (teamScore < opponentScore) return 'L'
+                              return 'D'
+                            })
+
+                            return (
+                              <TableRow key={team.id} className={index < 4 ? "bg-primary/5" : ""}>
+                                <TableCell className="font-bold">
+                                  <div className="flex items-center gap-2">
+                                    {index + 1}
+                                    {index < 4 && <Trophy className="h-4 w-4 text-primary" />}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-semibold">{team.name}</TableCell>
+                                <TableCell className="text-center">{team.games_played}</TableCell>
+                                <TableCell className="text-center">{team.wins}</TableCell>
+                                <TableCell className="text-center">{team.draws}</TableCell>
+                                <TableCell className="text-center">{team.losses}</TableCell>
+                                <TableCell className="text-center">{team.goals_for}</TableCell>
+                                <TableCell className="text-center">{team.goals_against}</TableCell>
+                                <TableCell className={`text-center font-semibold ${team.goal_difference > 0 ? "text-green-500" : team.goal_difference < 0 ? "text-red-500" : ""}`}>
+                                  {team.goal_difference > 0 ? "+" : ""}
+                                  {team.goal_difference}
+                                </TableCell>
+                                <TableCell className="text-center font-bold text-lg">{team.points}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1 justify-center">
+                                    {form.map((result, idx) => {
+                                      const colors = {
+                                        W: "bg-green-500",
+                                        D: "bg-yellow-500",
+                                        L: "bg-red-500",
+                                      }
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className={`w-4 h-4 rounded-full ${colors[result as keyof typeof colors]}`}
+                                          title={result === "W" ? "Win" : result === "D" ? "Draw" : "Loss"}
+                                        />
+                                      )
+                                    })}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Playoff Qualification</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-primary" />
+                        <span className="text-foreground">Top 4 teams qualify for playoffs</span>
+                      </div>
+                      <div className="text-sm text-foreground/70 mt-4">
+                        <div className="font-semibold mb-2">Current Qualifiers:</div>
+                        {teams.length === 0 ? (
+                          <p className="text-foreground/50">No teams qualified yet</p>
+                        ) : (
+                          <ul className="space-y-1">
+                            {teams.slice(0, 4).map((team, index) => (
+                              <li key={team.id} className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                                  {index + 1}
+                                </span>
+                                {team.name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Legend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-green-500" />
+                        <span className="text-foreground/70">Win</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-yellow-500" />
+                        <span className="text-foreground/70">Draw</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-red-500" />
+                        <span className="text-foreground/70">Loss</span>
+                      </div>
+                      <div className="pt-2 border-t border-border/30">
+                        <div className="text-foreground/70">
+                          <span className="font-semibold">P:</span> Played | <span className="font-semibold">W:</span> Won | <span className="font-semibold">D:</span> Drawn | <span className="font-semibold">L:</span> Lost
+                        </div>
+                        <div className="text-foreground/70 mt-1">
+                          <span className="font-semibold">GF:</span> Goals For | <span className="font-semibold">GA:</span> Goals Against | <span className="font-semibold">GD:</span> Goal Difference | <span className="font-semibold">Pts:</span> Points
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           ) : (
@@ -876,11 +1388,177 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Goals Section (Optional) */}
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Goal Scorers (Optional)</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addGoalToDialog}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Scorer
+                </Button>
+              </div>
+              {gameGoalsForDialog.length > 0 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {gameGoalsForDialog.map((goal, index) => {
+                    // Get players from both teams
+                    const homeTeamPlayers = roster.filter(r => r.team_id === gameForm.home_team_id)
+                    const awayTeamPlayers = roster.filter(r => r.team_id === gameForm.away_team_id)
+                    const allPlayers = [...homeTeamPlayers, ...awayTeamPlayers]
+
+                    return (
+                      <div key={index} className="flex gap-2 items-end p-2 border rounded">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Player</Label>
+                          <Select
+                            value={goal.player_id}
+                            onValueChange={(value) => updateGoalInDialog(index, 'player_id', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select player" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allPlayers.map((player) => (
+                                <SelectItem key={player.id} value={player.id}>
+                                  {player.full_name} {player.jersey_number ? `#${player.jersey_number}` : ''} 
+                                  {player.team?.name ? ` (${player.team.name})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-24 space-y-1">
+                          <Label className="text-xs">Goals</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={goal.goal_count}
+                            onChange={(e) => updateGoalInDialog(index, 'goal_count', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeGoalFromDialog(index)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {gameGoalsForDialog.length === 0 && (
+                <p className="text-sm text-foreground/70 italic">No goal scorers added. Click "Add Scorer" to track who scored.</p>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGameDialogOpen(false)}>Cancel</Button>
             <Button onClick={editingGame ? handleUpdateGame : handleCreateGame}>
               {editingGame ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Roster Dialog */}
+      <Dialog open={rosterDialogOpen} onOpenChange={setRosterDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingRoster ? 'Edit Player' : 'Add New Player'}</DialogTitle>
+            <DialogDescription>
+              {editingRoster ? 'Update player information' : 'Add a new player to the roster'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="roster-team">Team *</Label>
+              <Select value={rosterForm.team_id} onValueChange={(value) => setRosterForm({ ...rosterForm, team_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roster-name">Full Name *</Label>
+                <Input
+                  id="roster-name"
+                  value={rosterForm.full_name}
+                  onChange={(e) => setRosterForm({ ...rosterForm, full_name: e.target.value })}
+                  placeholder="Enter player's full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roster-jersey">Jersey Number</Label>
+                <Input
+                  id="roster-jersey"
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={rosterForm.jersey_number ?? ''}
+                  onChange={(e) => setRosterForm({ ...rosterForm, jersey_number: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="e.g., 10 (optional)"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roster-goals">Goals</Label>
+                <Input
+                  id="roster-goals"
+                  type="number"
+                  min="0"
+                  value={rosterForm.goals || ''}
+                  onChange={(e) => setRosterForm({ ...rosterForm, goals: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roster-assists">Assists</Label>
+                <Input
+                  id="roster-assists"
+                  type="number"
+                  min="0"
+                  value={rosterForm.assists || ''}
+                  onChange={(e) => setRosterForm({ ...rosterForm, assists: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roster-yellow">Yellow Cards</Label>
+                <Input
+                  id="roster-yellow"
+                  type="number"
+                  min="0"
+                  value={rosterForm.yellow_cards || ''}
+                  onChange={(e) => setRosterForm({ ...rosterForm, yellow_cards: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roster-red">Red Cards</Label>
+                <Input
+                  id="roster-red"
+                  type="number"
+                  min="0"
+                  value={rosterForm.red_cards || ''}
+                  onChange={(e) => setRosterForm({ ...rosterForm, red_cards: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRosterDialogOpen(false)}>Cancel</Button>
+            <Button onClick={editingRoster ? handleUpdateRoster : handleCreateRoster}>
+              {editingRoster ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -892,12 +1570,12 @@ export default function AdminPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the {deleteType === 'team' ? 'team' : 'game'}.
+              This action cannot be undone. This will permanently delete the {deleteType === 'team' ? 'team' : deleteType === 'game' ? 'game' : 'player'}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteType === 'team' ? handleDeleteTeam : handleDeleteGame}>
+            <AlertDialogAction onClick={handleDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

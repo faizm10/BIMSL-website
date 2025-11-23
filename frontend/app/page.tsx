@@ -1,3 +1,7 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Calendar, Clock, Trophy, Users, Shield, Star, Award, Mail, Phone } from "lucide-react"
@@ -5,7 +9,97 @@ import { Marquee } from "@/components/ui/marquee"
 import Image from "next/image"
 import Link from "next/link"
 
+type Game = {
+  id: string
+  match_id: string | null
+  week: number
+  game_date: string
+  game_time: string
+  location: string
+  home_team_id: string
+  away_team_id: string
+  home_score: number
+  away_score: number
+  status: string
+  home_team?: { id: string; name: string }
+  away_team?: { id: string; name: string }
+}
+
 export default function Home() {
+  const [recentScores, setRecentScores] = useState<Game[]>([])
+  const [upcomingGames, setUpcomingGames] = useState<Game[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        const supabase = createClient()
+
+        // Fetch recent completed games
+        const { data: completed, error: completedError } = await supabase
+          .from('games')
+          .select(`
+            *,
+            home_team:teams!games_home_team_id_fkey(id, name),
+            away_team:teams!games_away_team_id_fkey(id, name)
+          `)
+          .eq('status', 'completed')
+          .order('game_date', { ascending: false })
+          .order('game_time', { ascending: false })
+          .limit(6)
+
+        if (completedError) throw completedError
+
+        // Fetch upcoming games
+        const { data: upcoming, error: upcomingError } = await supabase
+          .from('games')
+          .select(`
+            *,
+            home_team:teams!games_home_team_id_fkey(id, name),
+            away_team:teams!games_away_team_id_fkey(id, name)
+          `)
+          .in('status', ['scheduled', 'in_progress'])
+          .order('game_date', { ascending: true })
+          .order('game_time', { ascending: true })
+          .limit(6)
+
+        if (upcomingError) throw upcomingError
+
+        setRecentScores(completed || [])
+        setUpcomingGames(upcoming || [])
+      } catch (error) {
+        console.error('Error fetching games:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGames()
+  }, [])
+
+  const formatTime = (time: string) => {
+    try {
+      const [hours, minutes] = time.split(':')
+      const hour = parseInt(hours)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+      return `${displayHour}:${minutes} ${ampm}`
+    } catch {
+      return time
+    }
+  }
+
+  const formatDate = (date: string) => {
+    try {
+      return new Date(date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      })
+    } catch {
+      return date
+    }
+  }
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -128,6 +222,123 @@ export default function Home() {
               <div className="text-center">
                 <div className="text-5xl font-black text-primary mb-2">4</div>
                 <div className="text-foreground/70 font-semibold">Playoff Teams</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Recent Scores & Upcoming Games */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Recent Scores */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl md:text-4xl font-bold text-foreground">Recent Scores</h2>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/scores">View All</Link>
+                  </Button>
+                </div>
+                {loading ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center text-foreground/70 py-4">Loading scores...</div>
+                    </CardContent>
+                  </Card>
+                ) : recentScores.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center text-foreground/70 py-4">No completed games yet</div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {recentScores.map((game) => (
+                      <Card key={game.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-foreground/60">
+                              {formatDate(game.game_date)} • Week {game.week}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-600 font-semibold">
+                              FT
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 text-right">
+                              <span className="font-medium text-foreground">{game.home_team?.name || 'TBD'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 font-bold text-lg">
+                              <span className={game.home_score > game.away_score ? "text-primary" : "text-foreground"}>
+                                {game.home_score}
+                              </span>
+                              <span className="text-foreground/50">-</span>
+                              <span className={game.away_score > game.home_score ? "text-primary" : "text-foreground"}>
+                                {game.away_score}
+                              </span>
+                            </div>
+                            <div className="flex-1">
+                              <span className="font-medium text-foreground">{game.away_team?.name || 'TBD'}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Upcoming Games */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl md:text-4xl font-bold text-foreground">Upcoming Games</h2>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/schedule">View All</Link>
+                  </Button>
+                </div>
+                {loading ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center text-foreground/70 py-4">Loading schedule...</div>
+                    </CardContent>
+                  </Card>
+                ) : upcomingGames.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center text-foreground/70 py-4">No upcoming games scheduled</div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingGames.map((game) => (
+                      <Card key={game.id} className="hover:shadow-md transition-shadow border-2 border-primary/20">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-foreground/60">
+                              {formatDate(game.game_date)} • {formatTime(game.game_time)} • Week {game.week}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary font-semibold">
+                              {game.status === 'in_progress' ? 'LIVE' : 'Upcoming'}
+                            </span>
+                          </div>
+                          <div className="text-foreground">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{game.home_team?.name || 'TBD'}</span>
+                              <span className="text-foreground/50">vs</span>
+                              <span className="font-medium">{game.away_team?.name || 'TBD'}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-foreground/60 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{game.location}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
