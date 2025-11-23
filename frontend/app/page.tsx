@@ -25,9 +25,20 @@ type Game = {
   away_team?: { id: string; name: string }
 }
 
+type GoalScorer = {
+  game_id: string
+  player_id: string
+  player?: {
+    id: string
+    full_name: string
+    team_id: string
+  }
+}
+
 export default function Home() {
   const [recentScores, setRecentScores] = useState<Game[]>([])
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([])
+  const [goalScorers, setGoalScorers] = useState<GoalScorer[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -79,8 +90,42 @@ export default function Home() {
         const filteredCompleted = filterPlayoffGames(completed || [])
         const filteredUpcoming = filterPlayoffGames(upcoming || [])
 
-        setRecentScores(filteredCompleted.slice(0, 6))
+        const recentGames = filteredCompleted.slice(0, 6)
+        setRecentScores(recentGames)
         setUpcomingGames(filteredUpcoming.slice(0, 6))
+
+        // Fetch goal scorers for recent games
+        if (recentGames.length > 0) {
+          try {
+            const gameIds = recentGames.map(g => g.id)
+            const { data: goalsData } = await supabase
+              .from('game_goals')
+              .select(`
+                game_id,
+                player_id,
+                player:roster(id, full_name, team_id)
+              `)
+              .eq('event_type', 'goal')
+              .in('game_id', gameIds)
+
+            if (goalsData) {
+              // Transform the data to match GoalScorer type
+              const transformedGoals = goalsData.map((goal: {
+                game_id: string
+                player_id: string
+                player: { id: string; full_name: string; team_id: string } | { id: string; full_name: string; team_id: string }[]
+              }) => ({
+                game_id: goal.game_id,
+                player_id: goal.player_id,
+                player: Array.isArray(goal.player) ? goal.player[0] : goal.player
+              }))
+              setGoalScorers(transformedGoals)
+            }
+          } catch (error) {
+            // Silently fail if game_goals table doesn't exist yet
+            console.warn('Could not fetch goal scorers:', error)
+          }
+        }
       } catch (error) {
         console.error('Error fetching games:', error)
       } finally {
@@ -126,7 +171,7 @@ export default function Home() {
                 alt="BIMSL Logo"
                 width={200}
                 height={200}
-                className="h-32 w-32 md:h-40 md:w-40 object-contain"
+                className="h-32 w-32 md:h-40 md:w-40 object-contain opacity-90"
           priority
         />
             </div>
@@ -279,37 +324,110 @@ export default function Home() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {recentScores.map((game) => (
-                      <Card key={game.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-foreground/60">
-                              {formatDate(game.game_date)} • Week {game.week}
-                            </span>
-                            <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-600 font-semibold">
-                              FT
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="flex-1 text-right min-w-0">
-                              <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.home_team?.name || 'TBD'}</span>
-                            </div>
-                            <div className="flex items-center gap-1 sm:gap-2 font-bold text-base sm:text-lg flex-shrink-0">
-                              <span className={game.home_score > game.away_score ? "text-primary" : "text-foreground"}>
-                                {game.home_score}
+                    {recentScores.map((game) => {
+                      // Get goal scorers for this game
+                      const gameGoals = goalScorers.filter(g => g.game_id === game.id)
+                      const homeScorers = gameGoals
+                        .filter(g => g.player?.team_id === game.home_team_id)
+                        .reduce((acc, goal) => {
+                          if (goal.player) {
+                            const existing = acc.find(s => s.player_id === goal.player_id)
+                            if (existing) {
+                              existing.goals += 1
+                            } else {
+                              acc.push({
+                                player_id: goal.player_id,
+                                player_name: goal.player.full_name,
+                                goals: 1
+                              })
+                            }
+                          }
+                          return acc
+                        }, [] as Array<{ player_id: string; player_name: string; goals: number }>)
+                      
+                      const awayScorers = gameGoals
+                        .filter(g => g.player?.team_id === game.away_team_id)
+                        .reduce((acc, goal) => {
+                          if (goal.player) {
+                            const existing = acc.find(s => s.player_id === goal.player_id)
+                            if (existing) {
+                              existing.goals += 1
+                            } else {
+                              acc.push({
+                                player_id: goal.player_id,
+                                player_name: goal.player.full_name,
+                                goals: 1
+                              })
+                            }
+                          }
+                          return acc
+                        }, [] as Array<{ player_id: string; player_name: string; goals: number }>)
+
+                      return (
+                        <Card key={game.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="pt-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-foreground/60">
+                                {formatDate(game.game_date)} • Week {game.week}
                               </span>
-                              <span className="text-foreground/50">-</span>
-                              <span className={game.away_score > game.home_score ? "text-primary" : "text-foreground"}>
-                                {game.away_score}
+                              <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-600 font-semibold">
+                                FT
                               </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.away_team?.name || 'TBD'}</span>
+                            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                              <div className="flex-1 text-right min-w-0">
+                                <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.home_team?.name || 'TBD'}</span>
+                              </div>
+                              <div className="flex items-center gap-1 sm:gap-2 font-bold text-base sm:text-lg flex-shrink-0">
+                                <span className={game.home_score > game.away_score ? "text-primary" : "text-foreground"}>
+                                  {game.home_score}
+                                </span>
+                                <span className="text-foreground/50">-</span>
+                                <span className={game.away_score > game.home_score ? "text-primary" : "text-foreground"}>
+                                  {game.away_score}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium text-foreground text-sm sm:text-base truncate block">{game.away_team?.name || 'TBD'}</span>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                            {/* Goal Scorers */}
+                            {(homeScorers.length > 0 || awayScorers.length > 0) && (
+                              <div className="mt-2 pt-2 border-t border-border/50 space-y-1.5">
+                                {homeScorers.length > 0 && (
+                                  <div className="text-xs text-foreground/70">
+                                    <span className="font-semibold">{game.home_team?.name || 'Home'}: </span>
+                                    {homeScorers
+                                      .sort((a, b) => b.goals - a.goals)
+                                      .map((scorer, idx) => (
+                                        <span key={scorer.player_id}>
+                                          {scorer.player_name}
+                                          {scorer.goals > 1 && <span className="font-bold"> ({scorer.goals})</span>}
+                                          {idx < homeScorers.length - 1 && ', '}
+                                        </span>
+                                      ))}
+                                  </div>
+                                )}
+                                {awayScorers.length > 0 && (
+                                  <div className="text-xs text-foreground/70">
+                                    <span className="font-semibold">{game.away_team?.name || 'Away'}: </span>
+                                    {awayScorers
+                                      .sort((a, b) => b.goals - a.goals)
+                                      .map((scorer, idx) => (
+                                        <span key={scorer.player_id}>
+                                          {scorer.player_name}
+                                          {scorer.goals > 1 && <span className="font-bold"> ({scorer.goals})</span>}
+                                          {idx < awayScorers.length - 1 && ', '}
+                                        </span>
+                                      ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -581,7 +699,7 @@ export default function Home() {
                   alt="BIMSL Logo"
                   width={120}
                   height={120}
-                  className="h-20 w-20 object-contain"
+                  className="h-20 w-20 object-contain opacity-90"
                 />
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground">About Us</h3>

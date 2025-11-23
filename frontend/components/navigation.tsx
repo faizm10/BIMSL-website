@@ -53,7 +53,7 @@ export function Navigation() {
               alt="BIMSL Logo"
               width={50}
               height={50}
-              className="h-10 w-10 md:h-12 md:w-12 object-contain"
+              className="h-10 w-10 md:h-12 md:w-12 object-contain opacity-90"
               priority
             />
             <div className="flex flex-col">
@@ -101,7 +101,7 @@ export function Navigation() {
                     alt="BIMSL Logo"
                     width={40}
                     height={40}
-                    className="h-10 w-10 object-contain"
+                    className="h-10 w-10 object-contain opacity-90"
                   />
                   <div>
                     <SheetTitle className="text-left text-xl font-bold">BIMSL</SheetTitle>
