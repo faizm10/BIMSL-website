@@ -120,6 +120,16 @@ export default function Home() {
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-primary/5 py-20 md:py-32">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
+            <div className="mb-8 flex justify-center">
+        <Image
+                src="/logo.png"
+                alt="BIMSL Logo"
+                width={200}
+                height={200}
+                className="h-32 w-32 md:h-40 md:w-40 object-contain"
+          priority
+        />
+            </div>
             <div className="mb-6">
               <span className="inline-block px-4 py-2 bg-primary/20 text-primary font-bold text-sm uppercase tracking-wider rounded-full">
                 INAUGURAL SEASON
@@ -565,6 +575,15 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <div>
+              <div className="mb-4">
+                <Image
+                  src="/logo.png"
+                  alt="BIMSL Logo"
+                  width={120}
+                  height={120}
+                  className="h-20 w-20 object-contain"
+                />
+              </div>
               <h3 className="text-xl font-bold mb-4 text-foreground">About Us</h3>
               <p className="text-foreground/70">
                 The Brampton Intra-Masjid Soccer League brings together teams from various masjids 
